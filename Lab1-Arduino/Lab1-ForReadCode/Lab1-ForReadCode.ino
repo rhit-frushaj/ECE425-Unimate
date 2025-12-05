@@ -282,3 +282,17 @@ void goToGoalIn(int xg, yg){ // in
   ygcm=yg/2.54;
   goToGoalCm(xgcm,ygcm);
 }
+
+void squareCm(int L){ // cm
+  goToGoalCm(L,0);
+  goToGoalCm(0,L);
+  goToGoalCm(0,L);
+  goToGoalCm(0,L);
+}
+
+void squareIn(int L){ // in
+  goToGoalIn(L,0);
+  goToGoalIn(0,L);
+  goToGoalIn(0,L);
+  goToGoalIn(0,L);
+}
