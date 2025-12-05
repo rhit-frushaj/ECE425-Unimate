@@ -258,3 +258,27 @@ if (thetag>180){
       thetac = thetac + .729;
     }
 }
+
+goToGoalCm(int xg, yg){ // cm
+  xc = 0;
+  yc = 0;
+  dc=0;
+  thetag = atan(xg/yg);
+  goToAngle(thetag);
+  dg = sqrt((xc-xg)^2+(yc-yg)^2)
+  while (dg>dc){
+    digitalWrite(rtStepPin, HIGH);
+    digitalWrite(ltStepPin, HIGH);
+    delayMicroseconds(stepTime);
+    digitalWrite(rtStepPin, LOW);
+    digitalWrite(ltStepPin, LOW);
+    delayMicroseconds(stepTime);
+    dc = dc + 0.1335 // cm
+  }
+}
+
+goToGoalIn(int xg, yg){ // in
+  xgcm=xg/2.54;
+  ygcm=yg/2.54;
+  goToGoalCm(xgcm,ygcm);
+}
