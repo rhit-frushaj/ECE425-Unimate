@@ -166,8 +166,42 @@ void pivot(int direction){
 }
 
 void turn(int direction){
+  Serial.println("turn function");
+  digitalWrite(redLED, HIGH);//turn on red LED
+  digitalWrite(grnLED, LOW);//turn off green LED
+  digitalWrite(ylwLED, LOW);//turn off yellow LED
 
-
+  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+    if (direction == 1){
+    
+  }
+ 
+  if (direction == 1){
+    for (int x = 0; x < 800; x++) {
+      digitalWrite(rtStepPin, HIGH);
+      digitalWrite(ltStepPin, HIGH);
+      delayMicroseconds(stepTime);
+      if (x % 2 ==0){
+      digitalWrite(rtStepPin, LOW);
+      }
+      digitalWrite(ltStepPin, LOW);
+      delayMicroseconds(stepTime);
+    } 
+    // Makes 800 pulses for making one full cycle rotation
+  } else {
+    for (int x = 0; x < 800; x++) {
+      digitalWrite(rtStepPin, HIGH);
+      digitalWrite(ltStepPin, HIGH);
+      delayMicroseconds(stepTime);
+      if (x % 2 ==0){
+      digitalWrite(ltStepPin, LOW);
+      }
+      digitalWrite(rtStepPin, LOW);
+      delayMicroseconds(stepTime);
+    }
+  }
+  delay(1000); // One second delay
 }
 
 void spin(bool CW) {
@@ -207,3 +241,20 @@ void stop(){
 
 }
 
+void goToAngle(int thetag){
+thetac = 0;
+if (thetag>180){
+  digitalWrite(rtDirPin, LOW);
+}else{
+  digitalWrite(ltDirPin, LOW);
+}
+  while (thetac<thetag){
+    digitalWrite(rtStepPin, HIGH);
+      digitalWrite(ltStepPin, HIGH);
+      delayMicroseconds(stepTime);
+      digitalWrite(rtStepPin, LOW);
+      digitalWrite(ltStepPin, LOW);
+      delayMicroseconds(stepTime);
+      thetac = thetac + .729;
+    }
+}
