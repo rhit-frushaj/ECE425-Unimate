@@ -241,14 +241,17 @@ void stop(){
 
 }
 
-void goToAngle(int thetag){
-thetac = 0;
-if (thetag>180){
-  digitalWrite(rtDirPin, LOW);
-}else{
-  digitalWrite(ltDirPin, LOW);
-}
-  while (thetac<thetag){
+void goToAngle(int thetag){ // degrees
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
+  thetac = 0;
+  if (thetag>180){
+    digitalWrite(rtDirPin, LOW);
+    thetag=thetag-180;
+  } else {
+    digitalWrite(ltDirPin, LOW);
+  }
+  while (thetac < thetag){
     digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -260,6 +263,8 @@ if (thetag>180){
 }
 
 void goToGoalCm(int xg, yg){ // cm
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
   xc = 0;
   yc = 0;
   dc=0;
