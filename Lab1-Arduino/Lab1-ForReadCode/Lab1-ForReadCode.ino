@@ -72,36 +72,44 @@ void init_stepper(){
   stepperRight.setAcceleration(max_accel);//set desired acceleration in steps/s^2
   stepperLeft.setMaxSpeed(max_speed);//set the maximum permitted speed limited by processor and clock speed, no greater than 4000 steps/sec on Arduino
   stepperLeft.setAcceleration(max_accel);//set desired acceleration in steps/s^2
-  steppers.addStepper(stepperRight);//add right motor to MultiStepper
   steppers.addStepper(stepperLeft);//add left motor to MultiStepper
+  steppers.addStepper(stepperRight);//add right motor to MultiStepper
   digitalWrite(stepperEnable, stepperEnTrue);//turns on the stepper motor driver
   digitalWrite(enableLED, HIGH);//turn on enable LED
 }
 
 void setup() {
   // put your setup code here, to run once:
+  init_stepper();
   Serial.begin(9600);
 
   //Initial Demo
 
-  reverse();
-  delay(1000);
-  forward();
-  delay(1000);
-  stop();
-  pivot(1); //left
-  delay(1000);
-  pivot(0); //right
-  delay(1000);
-  turn(1); //turn left
-  delay(1000);
-  turn(0); //turn right
-  delay(1000);
-  spin(true); //left
-  delay(1000);
-  spin(false);
-  delay(1000);
-  stop();
+  // reverse();
+  // delay(1000);
+  // forward();
+  // delay(1000);
+  // stop();
+  // pivot(1); //left
+  // delay(1000);
+  // pivot(0); //right
+  // delay(1000);
+  // turn(1); //turn left
+  // delay(1000);
+  // turn(0); //turn right
+  // delay(1000);
+  // spin(true); //left
+  // delay(1000);
+  // spin(false);
+  // delay(1000);
+  // stop();
+
+  //Advanced Features Demo
+
+  goToAngle(90);
+  goToGoalIn(-12, 36);
+  squareIn(2);
+
   // float theta = 0;
   // for (int i = 0; i < 360; i += 45){
   //   goToAngle(i*1.0);
@@ -319,7 +327,7 @@ void goToGoalCm(float xg, float yg){ // cm
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc = dc + 0.1335; // cm
+    dc = dc + (8.5*PI)/800; // cm
   }
 }
 
@@ -336,7 +344,7 @@ void squareCm(int L){ // cm
   goToGoalCm(0,L);
 }
 
-void squareIn(int L){ // in
+void squareIn(float L){ // in
   goToGoalIn(L,0);
   goToGoalIn(0,L);
   goToGoalIn(0,L);
