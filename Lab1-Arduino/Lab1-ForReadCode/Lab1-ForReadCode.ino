@@ -244,16 +244,17 @@ void stop(){
 
 }
 
-void goToAngle(int thetag){
-float thetac = 0;
+void goToAngle(int thetag){ // degrees
   digitalWrite(rtDirPin, HIGH);
   digitalWrite(ltDirPin, HIGH);
-if (thetag>180){
-  digitalWrite(rtDirPin, LOW);
-}else{
-  digitalWrite(ltDirPin, LOW);
-}
-  while (thetac<thetag){
+  thetac = 0;
+  if (thetag>180){
+    digitalWrite(rtDirPin, LOW);
+    thetag=thetag-180;
+  } else {
+    digitalWrite(ltDirPin, LOW);
+  }
+  while (thetac < thetag){
     digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -264,11 +265,13 @@ if (thetag>180){
     }
 }
 
-void goToGoalCm(int xg, int yg){ // cm
-  float xc = 0;
-  float yc = 0;
-  float dc=0;
-  float thetag = atan(xg/yg);
+void goToGoalCm(int xg, yg){ // cm
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
+  xc = 0;
+  yc = 0;
+  dc=0;
+  thetag = atan(xg/yg);
   goToAngle(thetag);
   float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg));
   while (dg>dc){
