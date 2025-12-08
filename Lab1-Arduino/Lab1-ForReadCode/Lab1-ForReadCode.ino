@@ -79,23 +79,26 @@ void init_stepper(){
 void setup() {
   // put your setup code here, to run once:
 
-  forward();
-  delay(1000);
-  reverse();
-  delay(1000);
-  pivot(1); //left
-  delay(1000);
-  pivot(0); //right
-  delay(1000);
-  turn(1); //turn left
-  delay(1000);
-  turn(0); //turn right
-  delay(1000);
-  spin(true); //left
-  delay(1000);
-  spin(false);
-  delay(1000);
-  stop();
+  // forward();
+  // delay(1000);
+  // reverse();
+  // delay(1000);
+  // pivot(1); //left
+  // delay(1000);
+  // pivot(0); //right
+  // delay(1000);
+  // turn(1); //turn left
+  // delay(1000);
+  // turn(0); //turn right
+  // delay(1000);
+  // spin(true); //left
+  // delay(1000);
+  // spin(false);
+  // delay(1000);
+  // stop();
+  int theta = 90;
+  goToAngle(theta);
+
 }
 
 void loop() {
@@ -242,7 +245,9 @@ void stop(){
 }
 
 void goToAngle(int thetag){
-thetac = 0;
+float thetac = 0;
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
 if (thetag>180){
   digitalWrite(rtDirPin, LOW);
 }else{
@@ -259,13 +264,13 @@ if (thetag>180){
     }
 }
 
-void goToGoalCm(int xg, yg){ // cm
-  xc = 0;
-  yc = 0;
-  dc=0;
-  thetag = atan(xg/yg);
+void goToGoalCm(int xg, int yg){ // cm
+  float xc = 0;
+  float yc = 0;
+  float dc=0;
+  float thetag = atan(xg/yg);
   goToAngle(thetag);
-  dg = sqrt((xc-xg)^2+(yc-yg)^2)
+  float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg));
   while (dg>dc){
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -273,13 +278,13 @@ void goToGoalCm(int xg, yg){ // cm
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc = dc + 0.1335 // cm
+    dc = dc + 0.1335; // cm
   }
 }
 
-void goToGoalIn(int xg, yg){ // in
-  xgcm=xg/2.54;
-  ygcm=yg/2.54;
+void goToGoalIn(int xg, int yg){ // in
+  float xgcm=xg/2.54;
+  float ygcm=yg/2.54;
   goToGoalCm(xgcm,ygcm);
 }
 
