@@ -85,30 +85,33 @@ void setup() {
 
   //Initial Demo
 
-  // reverse();
-  // delay(1000);
   // forward();
+  // delay(1000);
+  // reverse();
   // delay(1000);
   // stop();
   // pivot(1); //left
   // delay(1000);
   // pivot(0); //right
   // delay(1000);
-  // turn(1); //turn left
-  // delay(1000);
-  // turn(0); //turn right
-  // delay(1000);
-  // spin(true); //left
-  // delay(1000);
-  // spin(false);
-  // delay(1000);
-  // stop();
+  turn(1); //turn left
+  delay(1000);
+  turn(0); //turn right
+  delay(1000);
+  spin(true); //left
+  delay(1000);
+  spin(false);
+  delay(1000);
+  stop();
 
   //Advanced Features Demo  
   // goToAngle(45);
-  // goToGoalIn(-12, 36);
+  delay(5000);
+  goToGoalIn(36, 48);
+  delay(5000);
+  goToGoalIn(-24,-24);
   // squareIn(24);
-  goToAngle(90.0);
+  // goToAngle(90.0);
 }
 
 void loop() {
@@ -155,6 +158,8 @@ void reverse(){
 
 // 1 for pivot left, 0 for pivot right
 void pivot(int direction){
+  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
   int stepCount = 1012;
   if (direction ==  1){
     for (int x = 0; x < stepCount; x++) {
@@ -186,11 +191,11 @@ void turn(int direction){
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
  
   if (direction == 1){
-    for (int x = 0; x < 1212; x++) {
+    for (int x = 0; x < 1600; x++) {
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
-      if (x % 8 ==0){
+      if (x % 3 ==0){
       digitalWrite(rtStepPin, LOW);
       }
       digitalWrite(ltStepPin, LOW);
@@ -278,7 +283,7 @@ void goToGoalCm(float xg, float yg){ // cm
   float xc = 0;
   float yc = 0;
   float dc=0;
-  float thetag = atan(xg/yg);
+  float thetag = atan(yg/xg);
   if (xg <0 && yg < 0){
     thetag = thetag+ PI;
   }
