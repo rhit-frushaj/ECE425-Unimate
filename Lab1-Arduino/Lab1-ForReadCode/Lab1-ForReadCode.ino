@@ -329,26 +329,29 @@ void squareIn(float L){ // in
 }
 
 void circleCm(float D){ //cm
-  Serial.println("curcle function");
+  Serial.println("circle function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
   digitalWrite(ylwLED, HIGH);//turn off yellow LED
 
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-  long rsteps;
-  long lsteps;
+  long lsteps = 0;
+  long rsteps = 0;
 
+  float circouter = PI * (D + 43);
+  float circinner = PI * (D - 43);
+  float outersteps = circouter / (8.5 * PI / 800);
+  float innersteps = circinner / (8.5 * PI / 800);
   if (D > 0){
-  rsteps = D;
-  lsteps = D/(D+43);
+  rsteps = (long) outersteps;
+  lsteps = (long) innersteps;
   } else {
-  lsteps = D;
-  rsteps = D/(D+43);
+  lsteps = (long) outersteps;
+  rsteps = (long) innersteps;
   }
   long positions[2] = {lsteps,rsteps};
   delay(1000); // One second delay
-}
 
 void circleIn(float D){// in
   D = D*2.54;
