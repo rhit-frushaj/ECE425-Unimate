@@ -104,35 +104,15 @@ void setup() {
   // delay(1000);
   // stop();
 
-  //Advanced Features Demo
-
-  goToAngle(225.0);
-  // delay(2000);
-  // goToAngle(270);
-  // delay(1000);
-  // goToAngle(500);
-  // delay(1000);
-  // goToAngle(360);
-  
-
-  
-
-  // goToAngle(90);
+  //Advanced Features Demo  
+  // goToAngle(45);
   // goToGoalIn(-12, 36);
-  // squareIn(2);
-
-  // float theta = 0;
-  // for (int i = 0; i < 360; i += 45){
-  //   goToAngle(i*1.0);
-  //   delay(1000);
-  // }
-  // goToAngle(90.0);
+  // squareIn(24);
+  goToAngle(90.0);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  // goToGoalIn(-12,-12);
-  // delay(10000);
 }
 
 void forward() {
@@ -306,6 +286,9 @@ void goToGoalCm(float xg, float yg){ // cm
   goToAngle(thetag*(180/PI));
   float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg));
   Serial.println(dg);
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
+  delay(100);
   while (dg>dc){
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -313,13 +296,15 @@ void goToGoalCm(float xg, float yg){ // cm
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc = dc + (8.5*PI)/800; // cm
+    dc += (8.5*PI)/800; // cm
+    delayMicroseconds(1000);
+
   }
 }
 
 void goToGoalIn(float xg, float yg){ // in
-  float xgcm=xg/2.54;
-  float ygcm=yg/2.54;
+  float xgcm=xg*2.54;
+  float ygcm=yg*2.54;
   goToGoalCm(xgcm,ygcm);
 }
 
@@ -331,8 +316,7 @@ void squareCm(int L){ // cm
 }
 
 void squareIn(float L){ // in
+  goToGoalIn(0,L);
+  for (int index = 0; index <3; index++)
   goToGoalIn(L,0);
-  goToGoalIn(0,L);
-  goToGoalIn(0,L);
-  goToGoalIn(0,L);
 }
