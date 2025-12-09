@@ -94,24 +94,25 @@ void setup() {
   // delay(1000);
   // pivot(0); //right
   // delay(1000);
-  turn(1); //turn left
-  delay(1000);
-  turn(0); //turn right
-  delay(1000);
-  spin(true); //left
-  delay(1000);
-  spin(false);
-  delay(1000);
-  stop();
+  // turn(1); //turn left
+  // delay(1000);
+  // turn(0); //turn right
+  // delay(1000);
+  // spin(true); //left
+  // delay(1000);
+  // spin(false);
+  // delay(1000);
+  // stop();
 
   //Advanced Features Demo  
-  // goToAngle(45);
-  delay(5000);
-  goToGoalIn(36, 48);
-  delay(5000);
-  goToGoalIn(-24,-24);
-  // squareIn(24);
-  // goToAngle(90.0);
+  // delay(5000);
+  // goToGoalIn(36, 48);
+  // delay(5000);
+  // goToGoalIn(-24,-24);
+  squareIn(36);
+  // circleIn(36);
+  // delay(1000);
+  // circleIn(-36);
 }
 
 void loop() {
@@ -255,6 +256,8 @@ void stop(){
 }
 
 void goToAngle(float thetag){ // degrees
+  float drift = 1.02;
+  thetag *= drift;
   digitalWrite(rtDirPin, HIGH);
   digitalWrite(ltDirPin, HIGH);
   float thetac = 0;
@@ -315,15 +318,14 @@ void goToGoalIn(float xg, float yg){ // in
 
 void squareCm(int L){ // cm
   goToGoalCm(L,0);
-  goToGoalCm(0,L);
-  goToGoalCm(0,L);
+  for (int index = 0; index <3; index++)
   goToGoalCm(0,L);
 }
 
 void squareIn(float L){ // in
-  goToGoalIn(0,L);
-  for (int index = 0; index <3; index++)
   goToGoalIn(L,0);
+  for (int index = 0; index <3; index++)
+  goToGoalIn(0,L);
 }
 
 void circleCm(float D){ //cm
@@ -334,13 +336,15 @@ void circleCm(float D){ //cm
 
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+  long rsteps;
+  long lsteps;
 
   if (D > 0){
-  int rsteps = D;
-  int lsteps = D/(D+43);
+  rsteps = D;
+  lsteps = D/(D+43);
   } else {
-  int lsteps = D;
-  int rsteps = D/(D+43);
+  lsteps = D;
+  rsteps = D/(D+43);
   }
   long positions[2] = {lsteps,rsteps};
   delay(1000); // One second delay
