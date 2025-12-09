@@ -81,7 +81,7 @@ void init_stepper(){
 void setup() {
   // put your setup code here, to run once:
   init_stepper();
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   //Initial Demo
 
@@ -106,9 +106,20 @@ void setup() {
 
   //Advanced Features Demo
 
-  goToAngle(90);
-  goToGoalIn(-12, 36);
-  squareIn(2);
+  goToAngle(225.0);
+  // delay(2000);
+  // goToAngle(270);
+  // delay(1000);
+  // goToAngle(500);
+  // delay(1000);
+  // goToAngle(360);
+  
+
+  
+
+  // goToAngle(90);
+  // goToGoalIn(-12, 36);
+  // squareIn(2);
 
   // float theta = 0;
   // for (int i = 0; i < 360; i += 45){
@@ -120,7 +131,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  // goToGoalIn(-12,-12);
+  // delay(10000);
 }
 
 void forward() {
@@ -257,42 +269,16 @@ void stop(){
 
 }
 
-// void goToAngle(float thetag){ // degrees
-//   digitalWrite(rtDirPin, HIGH);
-//   digitalWrite(ltDirPin, HIGH);
-//   float thetac = 0;
-//   if (thetag>180){
-//     digitalWrite(rtDirPin, LOW);
-//     thetag=thetag-180;
-//   } else {
-//     digitalWrite(ltDirPin, LOW);
-//   }
-//   while (thetac < thetag){
-//       digitalWrite(rtStepPin, HIGH);
-//       digitalWrite(ltStepPin, HIGH);
-//       delayMicroseconds(stepTime);
-//       digitalWrite(rtStepPin, LOW);
-//       digitalWrite(ltStepPin, LOW);
-//       delayMicroseconds(stepTime);
-//       thetac = thetac + .08895;
-//     }
-// }
-
-void goToAngle(float thetag) { // degrees
-  float thetac = currentAngle;
-
-  if (thetag > 180) {
-    digitalWrite(rtDirPin, LOW);  // reverse right wheel
-    digitalWrite(ltDirPin, HIGH); // left wheel forward
-    thetag -= 180;
+void goToAngle(float thetag){ // degrees
+  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(ltDirPin, HIGH);
+  float thetac = 0;
+  if (thetag>180){
+    digitalWrite(rtDirPin, LOW);
+    thetag = abs(thetag-360);
   } else {
-    digitalWrite(ltDirPin, LOW);  // reverse left wheel
-    digitalWrite(rtDirPin, HIGH); // right wheel forward
+    digitalWrite(ltDirPin, LOW);
   }
-
-  // Now start turning
-  int step = 0;
-  int stepSpeed = 1000;
   while (thetac < thetag){
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
@@ -300,26 +286,26 @@ void goToAngle(float thetag) { // degrees
       digitalWrite(rtStepPin, LOW);
       digitalWrite(ltStepPin, LOW);
       delayMicroseconds(stepTime);
-      thetac += 1530.0/8600.0;
-      step++;
-      Serial.println(step);
-      Serial.println(thetac);
-      delayMicroseconds(stepSpeed); //way to control speed of motors
-  }
-  currentAngle = thetac;
-
+      thetac = thetac + 1530.0/8600.0;
+      delayMicroseconds(1000);
+    }
 }
 
-
 void goToGoalCm(float xg, float yg){ // cm
+  Serial.println("Going to goal in CM");
   digitalWrite(rtDirPin, HIGH);
   digitalWrite(ltDirPin, HIGH);
   float xc = 0;
   float yc = 0;
   float dc=0;
   float thetag = atan(xg/yg);
-  goToAngle(thetag);
+  if (xg <0 && yg < 0){
+    thetag = thetag+ PI;
+  }
+  Serial.println(thetag*(180/PI));
+  goToAngle(thetag*(180/PI));
   float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg));
+  Serial.println(dg);
   while (dg>dc){
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);

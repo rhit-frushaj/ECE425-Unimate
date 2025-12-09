@@ -45,7 +45,7 @@ void setup() {
 
   Serial.begin(9600);
   init_stepper();
-  
+
   long positions[2] = {1000, 2000};  // target positions
   steppers.moveTo(positions);
 
@@ -62,7 +62,6 @@ void loop(){
   // Serial.println("running...");
 
   steppers.run();
-
 }
 
 
