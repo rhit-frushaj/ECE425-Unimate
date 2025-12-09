@@ -325,3 +325,28 @@ void squareIn(float L){ // in
   for (int index = 0; index <3; index++)
   goToGoalIn(L,0);
 }
+
+void circleCm(float D){ //cm
+  Serial.println("curcle function");
+  digitalWrite(redLED, HIGH);//turn on red LED
+  digitalWrite(grnLED, LOW);//turn off green LED
+  digitalWrite(ylwLED, HIGH);//turn off yellow LED
+
+  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+
+  if (D > 0){
+  int rsteps = D;
+  int lsteps = D/(D+43);
+  } else {
+  int lsteps = D;
+  int rsteps = D/(D+43);
+  }
+  long positions[2] = {lsteps,rsteps};
+  delay(1000); // One second delay
+}
+
+void circleIn(float D){// in
+  D = D*2.54;
+  circleCm(D);
+}
