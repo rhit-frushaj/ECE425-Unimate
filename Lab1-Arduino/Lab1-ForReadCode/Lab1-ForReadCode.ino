@@ -82,7 +82,7 @@ void setup() {
   // put your setup code here, to run once:
   init_stepper();
   Serial.begin(115200);
-
+  delay(1000);
   //Initial Demo
 
   // forward();
@@ -110,11 +110,11 @@ void setup() {
   // delay(5000);
   // goToGoalIn(-24,-24);
   // squareIn(36);
-  circleIn(36);
+
+  circleCm(-24*2.54);  // CCW (negative)
   delay(1000);
-  circleIn(-36);
-  // delay(1000);
-  // circleIn(-36);
+  circleCm(24*2.54);   // CW (positive)
+
 }
 
 void loop() {
@@ -330,40 +330,86 @@ void squareIn(float L){ // in
   goToGoalIn(0,L);
 }
 
-void circleCm(float D){ //cm
+// void circleCm(float D){ //cm
+//   Serial.println("circle function");
+//   digitalWrite(redLED, HIGH);//turn on red LED
+//   digitalWrite(grnLED, LOW);//turn off green LED
+//   digitalWrite(ylwLED, HIGH);//turn off yellow LED
+
+//   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
+//   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+//   // long lsteps = 0;
+//   // long rsteps = 0;
+//   long positions[2] = {0, 0};
+
+//   float circouter = abs(PI * (D + 21.5)); //circumfrence in centimeters
+//   float circinner = abs(PI * (D - 21.5));
+//   // float circouter = PI * (D + 21.5); //circumfrence in centimeters
+//   // float circinner = PI * (D - 21.5);
+//   float outersteps = circouter / (8.5 * PI / 800); //converts to motor steps
+//   float innersteps = circinner / (8.5 * PI / 800);
+//   if (D > 0){
+//   // rsteps = (long) outersteps;
+//   // lsteps = (long) innersteps;
+//   positions[0] = (long) outersteps;
+//   positions[1] = (long) innersteps;
+//   Serial.println("Inside greater");
+//   } else if (D < 0) {
+//   // lsteps = (long) outersteps;
+//   // rsteps = (long) innersteps;
+//   positions[1] = (long) outersteps;
+//   positions[0] = (long) innersteps;
+//   Serial.println("Inside less");
+//   }
+//   // long positions[2] = {lsteps,rsteps};
+//   Serial.println("outside");
+//   steppers.moveTo(positions);
+//   bool running = true;
+//   while(running){
+//     running = steppers.run();
+//   }
+
+//   stepperRight.setCurrentPosition(0);
+//   stepperLeft.setCurrentPosition(0);
+
+// }
+
+void circleCm(float D){ //cm - positive for CW, negative for CCW
   Serial.println("circle function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, HIGH);//turn off yellow LED
+  digitalWrite(ylwLED, HIGH);//turn on yellow LED
 
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-  long lsteps = 0;
-  long rsteps = 0;
 
-  // float circouter = abs(PI * (D + 21.5)); //circumfrence in centimeters
-  // float circinner = abs(PI * (D - 21.5));
-  float circouter = PI * (D + 21.5); //circumfrence in centimeters
-  float circinner = PI * (D - 21.5);
-  float outersteps = circouter / (8.5 * PI / 800); //converts to motor steps
+  float absD = abs(D); // Use absolute value for calculations
+  float circouter = PI * (absD + 21.5); //circumference in centimeters
+  float circinner = PI * (absD - 21.5);
+  
+  float outersteps = circouter / (8.5 * PI / 800); //converts circumfrence to motor steps from cm
   float innersteps = circinner / (8.5 * PI / 800);
-  if (D > 0){
-  rsteps = (long) outersteps;
-  lsteps = (long) innersteps;
-  } else if (D < 0) {
-  lsteps = (long) outersteps;
-  rsteps = (long) innersteps;
+
+  long positions[2];
+  
+  // If D is positive (CW), inner steps go to left motor, outer to right !!!! I think this is currently flipped !!!!
+  // If D is negative (CCW), outer steps go to left motor, inner to right
+  if(D > 0){
+    positions[0] = (long) innersteps;  // CW: left motor gets inner
+    positions[1] = (long) outersteps;  // CW: right motor gets outer
+  } else {
+    positions[0] = (long) outersteps;  // CCW: left motor gets outer
+    positions[1] = (long) innersteps;  // CCW: right motor gets inner
   }
-  long positions[2] = {lsteps,rsteps};
+
   steppers.moveTo(positions);
   bool running = true;
   while(running){
     running = steppers.run();
   }
 
-  stepperRight.setCurrentPosition(0);
+  stepperRight.setCurrentPosition(0); //have to reset the position since the moveTo command is not relative.
   stepperLeft.setCurrentPosition(0);
-
 }
 
 void circleIn(float D){// in
