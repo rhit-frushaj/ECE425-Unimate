@@ -109,8 +109,10 @@ void setup() {
   // goToGoalIn(36, 48);
   // delay(5000);
   // goToGoalIn(-24,-24);
-  squareIn(36);
-  // circleIn(36);
+  // squareIn(36);
+  circleIn(36);
+  delay(1000);
+  circleIn(-36);
   // delay(1000);
   // circleIn(-36);
 }
@@ -339,19 +341,30 @@ void circleCm(float D){ //cm
   long lsteps = 0;
   long rsteps = 0;
 
-  float circouter = PI * (D + 43);
-  float circinner = PI * (D - 43);
-  float outersteps = circouter / (8.5 * PI / 800);
+  // float circouter = abs(PI * (D + 21.5)); //circumfrence in centimeters
+  // float circinner = abs(PI * (D - 21.5));
+  float circouter = PI * (D + 21.5); //circumfrence in centimeters
+  float circinner = PI * (D - 21.5);
+  float outersteps = circouter / (8.5 * PI / 800); //converts to motor steps
   float innersteps = circinner / (8.5 * PI / 800);
   if (D > 0){
   rsteps = (long) outersteps;
   lsteps = (long) innersteps;
-  } else {
+  } else if (D < 0) {
   lsteps = (long) outersteps;
   rsteps = (long) innersteps;
   }
   long positions[2] = {lsteps,rsteps};
-  delay(1000); // One second delay
+  steppers.moveTo(positions);
+  bool running = true;
+  while(running){
+    running = steppers.run();
+  }
+
+  stepperRight.setCurrentPosition(0);
+  stepperLeft.setCurrentPosition(0);
+
+}
 
 void circleIn(float D){// in
   D = D*2.54;
