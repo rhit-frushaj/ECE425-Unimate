@@ -1,7 +1,22 @@
-/*
-ADD approptiate heading
-
-
+/************************************
+   Lab1-ForReadCode.ino
+   Andrew Frush, Val Rumzis, 12.11.25
+   ***********************************
+   This program will introduce using the stepper motor library to create motion algorithms for the robot.
+   The motions will be forward, reverse, pivot, spin, turn, stop, go to angle, go to goal, move in a circle, square, and figure eight.
+   The primary functions created are:
+   forward   - 
+   reverse   - 
+   pivot     - 
+   spin      -
+   turn      -
+   stop      -
+   goToAngle -
+   goToGoal  -
+   square    -
+   circle    -
+   figure8   -
+   
 */
 
 //includew all necessary libraries
@@ -128,7 +143,7 @@ void forward() {
   digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-  // Makes 800 pulses for making one full cycle rotation
+  // Makes 1500 pulses 
   for (int x = 0; x < 1500; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -147,7 +162,7 @@ void reverse(){
   digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, LOW); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, LOW); // Enables the motor to move in a particular direction
-  // Makes 800 pulses for making one full cycle rotation
+  // Makes 1500 pulses 
   for (int x = 0; x < 1500; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -219,7 +234,10 @@ void turn(int direction){
   }
   delay(1000); // One second delay
 }
+/*
 
+
+*/
 void spin(bool CW) {
  
   Serial.println("spin function");
@@ -243,6 +261,7 @@ void spin(bool CW) {
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
   }
+  
   if (CW) {
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in opposite direction
   } else {
