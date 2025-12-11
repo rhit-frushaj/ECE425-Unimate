@@ -125,10 +125,7 @@ void setup() {
   // delay(5000);
   // goToGoalIn(-24,-24);
   // squareIn(36);
-
-  circleCm(-24*2.54);  // CCW (negative)
-  delay(1000);
-  circleCm(24*2.54);   // CW (positive)
+  figure8(36);
 
 }
 
@@ -270,155 +267,191 @@ void spin(bool CW) {
   delay(1000); // One second delay
 }
 
+/*
+  Ensures: stops the motors from running by turning both motor step pins to low.
+*/
 void stop(){
   digitalWrite(rtStepPin, LOW);
   digitalWrite(ltStepPin, LOW);
 
 }
 
+/*
+  Ensures: Moves the robot to face in an angle relative to it's starting position. Robot will turn CCW or CW based on which requires the shortest time.
+
+  Example rotation:
+
+   (30 deg)\    ^ X
+            \   |
+             \  |
+              \ |
+      <---------O (robot origin - facing in positive x direction)       
+      Y
+
+  float thetag: Angle goal to turn to, positive only between 0 -> 360 degrees.
+*/
 void goToAngle(float thetag){ // degrees
-  float drift = 1.02;
+  float drift = 1.02; //added to artificially correct for the overshoot/ compounding error during square
   thetag *= drift;
-  digitalWrite(rtDirPin, HIGH);
+  digitalWrite(rtDirPin, HIGH); //sets both motors forward
   digitalWrite(ltDirPin, HIGH);
   float thetac = 0;
-  if (thetag>180){
+  if (thetag>180){ //if angle is greater than 180 want to rotate CCW, right motor reverses
     digitalWrite(rtDirPin, LOW);
-    thetag = abs(thetag-360);
-  } else {
-    digitalWrite(ltDirPin, LOW);
+    thetag = abs(thetag-360); //calculates angle to rotate in opposite direction
+  } else { 
+    digitalWrite(ltDirPin, LOW); //otherwise rotates CW, left motor reverses
   }
-  while (thetac < thetag){
+  while (thetac < thetag){ //main stepping loop, stops when current angle is equal to or greater than target angle
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
       digitalWrite(rtStepPin, LOW);
       digitalWrite(ltStepPin, LOW);
       delayMicroseconds(stepTime);
-      thetac = thetac + 1530.0/8600.0;
-      delayMicroseconds(1000);
+      thetac += 1530.0/8600.0; //calculated amount the robot turns per one step of both motors in opposite directions
+      delayMicroseconds(1000); //artificially added delay to help reduce overshoot/momentum
     }
 }
 
+/*
+  Ensures: Moves the robot to a position based on it's current position in centimeters. First rotates the robot then moves in a straight line directly to the goal. 
+           The coordinate system of the robot can be visualized below:
+
+                ^ X
+                |
+                |
+                |
+      <---------|        
+      Y
+    
+  float xg: X coordinate of the desired ending location in centimeters.
+  float yg: Y coordinate of the desired ending location in centimeters.
+*/
 void goToGoalCm(float xg, float yg){ // cm
-  Serial.println("Going to goal in CM");
-  digitalWrite(rtDirPin, HIGH);
+  Serial.println("Going to goal");
+  digitalWrite(rtDirPin, HIGH); //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
-  float xc = 0;
+  float xc = 0; //variable for tracking current position
   float yc = 0;
   float dc=0;
-  float thetag = atan(yg/xg);
-  if (xg <0 && yg < 0){
+  float thetag = atan(yg/xg); //calculate desired angle
+  if ((xg <0 && yg < 0) || (xg > 0 && yg < 0)){ // if point lies in 3 or 4th quadrant must add 180 degrees to angle
     thetag = thetag+ PI;
   }
-  Serial.println(thetag*(180/PI));
-  goToAngle(thetag*(180/PI));
-  float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg));
-  Serial.println(dg);
-  digitalWrite(rtDirPin, HIGH);
+  goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
+  float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg)); //calcule distance in cm for robot to travel
+
+  digitalWrite(rtDirPin, HIGH); //set both motors back to drive forward after rotation occured
   digitalWrite(ltDirPin, HIGH);
+
   delay(100);
-  while (dg>dc){
+  while (dg >= dc){ //main loop advancing robot until it's current position equales or exceedes the target distance
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc += (8.5*PI)/800; // cm
-    delayMicroseconds(1000);
+    dc += (8.5*PI)/800; // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
+    delayMicroseconds(1000); //artificially added delay to slow down speed further
 
   }
 }
 
+/*
+  Ensures: Moves the robot to a position based on it's current position in inches. First rotates the robot then moves in a straight line directly to the goal. 
+           The coordinate system of the robot can be visualized below:
+
+                ^ X
+                |
+                |
+                |
+      <---------|        
+      Y
+    
+  float xg: X coordinate of the desired ending location in inches.
+  float yg: Y coordinate of the desired ending location in inches.
+*/
 void goToGoalIn(float xg, float yg){ // in
-  float xgcm=xg*2.54;
+  float xgcm=xg*2.54; //conversion to cm
   float ygcm=yg*2.54;
   goToGoalCm(xgcm,ygcm);
 }
 
-void squareCm(int L){ // cm
+/*
+ Ensures: Moves the robot in a square of a programable side length. Robot starts in the bottom of the square and would follow the path shown below:
+
+  visits (Start (1) -> 2 -> 3 -> 4 -> End (1))
+  
+    3----<----2
+    |         |
+    v         ^
+    |         |
+    4---->----1 (Start, End)
+    
+ float L: Side length of the square in centimeters. Only takes in a positive value for side length.
+*/
+void squareCm(float L){
+  L = abs(L);
   goToGoalCm(L,0);
   for (int index = 0; index <3; index++)
   goToGoalCm(0,L);
 }
 
-void squareIn(float L){ // in
+/*
+ Ensures: Moves the robot in a square of a programable side length. Robot starts in the bottom of the square and would follow the path shown below:
+
+  visits (Start (1) -> 2 -> 3 -> 4 -> End (1))
+  
+    3----<----2
+    |         |
+    v         ^
+    |         |
+    4---->----1 (Start, End)
+    
+ float L: Side length of the square in Inches. Only takes in a positive value for side length.
+*/
+void squareIn(float L){
+  L = abs(L);
   goToGoalIn(L,0);
   for (int index = 0; index <3; index++)
   goToGoalIn(0,L);
 }
 
-// void circleCm(float D){ //cm
-//   Serial.println("circle function");
-//   digitalWrite(redLED, HIGH);//turn on red LED
-//   digitalWrite(grnLED, LOW);//turn off green LED
-//   digitalWrite(ylwLED, HIGH);//turn off yellow LED
+/*
+  Ensures: Moves the robot in a CW or CCW circle of some diameter in centimeters. Diameter is based on the centerline of the robot (between two wheeles).
 
-//   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-//   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-//   // long lsteps = 0;
-//   // long rsteps = 0;
-//   long positions[2] = {0, 0};
-
-//   float circouter = abs(PI * (D + 21.5)); //circumfrence in centimeters
-//   float circinner = abs(PI * (D - 21.5));
-//   // float circouter = PI * (D + 21.5); //circumfrence in centimeters
-//   // float circinner = PI * (D - 21.5);
-//   float outersteps = circouter / (8.5 * PI / 800); //converts to motor steps
-//   float innersteps = circinner / (8.5 * PI / 800);
-//   if (D > 0){
-//   // rsteps = (long) outersteps;
-//   // lsteps = (long) innersteps;
-//   positions[0] = (long) outersteps;
-//   positions[1] = (long) innersteps;
-//   Serial.println("Inside greater");
-//   } else if (D < 0) {
-//   // lsteps = (long) outersteps;
-//   // rsteps = (long) innersteps;
-//   positions[1] = (long) outersteps;
-//   positions[0] = (long) innersteps;
-//   Serial.println("Inside less");
-//   }
-//   // long positions[2] = {lsteps,rsteps};
-//   Serial.println("outside");
-//   steppers.moveTo(positions);
-//   bool running = true;
-//   while(running){
-//     running = steppers.run();
-//   }
-
-//   stepperRight.setCurrentPosition(0);
-//   stepperLeft.setCurrentPosition(0);
-
-// }
-
-void circleCm(float D){ //cm - positive for CW, negative for CCW
+  float D: Represents the diameter of the circle to traverse in centimeters. 
+           Postive Input:  CW Rotation
+           Negative Input: CCW Rotation
+*/
+void circleCm(float D){
   Serial.println("circle function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
   digitalWrite(ylwLED, HIGH);//turn on yellow LED
 
-  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+  digitalWrite(ltDirPin, HIGH); // Enables the motor to move forward
+  digitalWrite(rtDirPin, HIGH);
 
   float absD = abs(D); // Use absolute value for calculations
-  float circouter = PI * (absD + 21.5); //circumference in centimeters
-  float circinner = PI * (absD - 21.5);
+  float circouter = PI * (absD + 21.5); //circumference in centimeters for outer wheel
+  float circinner = PI * (absD - 21.5); //circumference in centimeters for inner wheel
   
-  float outersteps = circouter / (8.5 * PI / 800); //converts circumfrence to motor steps from cm
-  float innersteps = circinner / (8.5 * PI / 800);
+  float correctionFactor = 0.99; //correction factor added to adjust, tuned so that start and stop at same position
+
+  float outersteps = correctionFactor * circouter / (8.5 * PI / 800); //converts circumfrence to motor steps from cm
+  float innersteps = correctionFactor * circinner / (8.5 * PI / 800);
 
   long positions[2];
   
-  // If D is positive (CW), inner steps go to left motor, outer to right !!!! I think this is currently flipped !!!!
-  // If D is negative (CCW), outer steps go to left motor, inner to right
-  if(D > 0){
-    positions[0] = (long) innersteps;  // CW: left motor gets inner
-    positions[1] = (long) outersteps;  // CW: right motor gets outer
+  if(D < 0){ //CCW Case in which case the left wheel becomes the inner wheel
+    positions[0] = (long) innersteps;  
+    positions[1] = (long) outersteps;  
   } else {
-    positions[0] = (long) outersteps;  // CCW: left motor gets outer
-    positions[1] = (long) innersteps;  // CCW: right motor gets inner
+    positions[0] = (long) outersteps;  
+    positions[1] = (long) innersteps;  
   }
 
   steppers.moveTo(positions);
@@ -427,11 +460,32 @@ void circleCm(float D){ //cm - positive for CW, negative for CCW
     running = steppers.run();
   }
 
-  stepperRight.setCurrentPosition(0); //have to reset the position since the moveTo command is not relative.
+  stepperRight.setCurrentPosition(0); //have to reset the ending position back to 0 since the moveTo command is not relative.
   stepperLeft.setCurrentPosition(0);
 }
 
+/*
+  Ensures: Moves the robot in a CW or CCW circle of some diameter in inches. Diameter is based on the centerline of the robot (between two wheeles).
+
+  float D: Represents the diameter of the circle to traverse in Inches. 
+           Postive Input:  CW Rotation
+           Negative Input: CCW Rotation
+*/
 void circleIn(float D){// in
   D = D*2.54;
   circleCm(D);
 }
+
+/*
+ Ensures: Moves the robot in a figure eight starting at the center of the figure eight.
+
+ float D: Diameter of the circles made in the figure eight in inches. 
+          Positive Input: Performs a CW circle then a CCW circle
+          Negative Input: Performs a CCW circle then a CW circle
+*/
+void figure8(float D){
+  circleIn(D);
+  circleIn(-1*D);
+
+}
+
