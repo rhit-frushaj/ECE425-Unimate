@@ -11,7 +11,7 @@
    pivot     - Pivots robots by rotating the corresponding wheel 1012 pulses. For a pivot CCW, the right wheel is powered and for a pivot CW, the left wheel is powered.
    spin      - Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
    turn      - Turns robots by rotating the outside wheel 1600 pulses. The inside wheel moves every third pulse, therefore moving inner wheel 1/3rd the speed.
-   stop      - Stops the motors from running by turning both motor step pins to low.
+   stop      - Stops the motors from running by using the built in stop() method from the AccelStepper library
    goToAngle - Moves the robot to face in an angle relative to it's starting position. Robot will turn CCW or CW based on which requires the shortest time. See function for visual example.
    goToGoalCm- Moves the robot to a position based on it's current position in centimeters. First rotates the robot then moves in a straight line directly to the goal. See function for visual example.
    squareCm  - Moves the robot in a square of a programable side length. Robot starts in the bottom of the square. See function for visual example.
@@ -100,6 +100,7 @@ void setup() {
   init_stepper();
   Serial.begin(115200);
   delay(1000);
+  
   //Initial Demo
 
   // forward();
@@ -286,11 +287,11 @@ void spin(bool CW) {
 }
 
 /*
-  Ensures: stops the motors from running by turning both motor step pins to low.
+  Ensures: stops the motors from running by using the built in stop() method from the AccelStepper library.
 */
 void stop(){
-  digitalWrite(rtStepPin, LOW);
-  digitalWrite(ltStepPin, LOW);
+  stepperRight.stop();
+  stepperLeft.stop();
 
 }
 
