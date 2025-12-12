@@ -4,19 +4,21 @@
    ***********************************
    This program will introduce using the stepper motor library to create motion algorithms for the robot.
    The motions will be forward, reverse, pivot, spin, turn, stop, go to angle, go to goal, move in a circle, square, and figure eight.
-   The primary functions created are:
-   forward   - 
-   reverse   - 
-   pivot     - 
-   spin      -
-   turn      -
-   stop      -
-   goToAngle -
-   goToGoal  -
-   square    -
-   circle    -
-   figure8   -
    
+   The primary functions created are:
+   forward   - Moves the robot forwards by rotating the wheels forwards for 1500 pulses.
+   reverse   - Moves the robot backwards by rotating the wheels backwards for 1500 pulses.
+   pivot     - Pivots robots by rotating the corresponding wheel 1012 pulses. For a pivot CCW, the right wheel is powered and for a pivot CW, the left wheel is powered.
+   spin      - Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
+   turn      - Turns robots by rotating the outside wheel 1600 pulses. The inside wheel moves every third pulse, therefore moving inner wheel 1/3rd the speed.
+   stop      - Stops the motors from running by turning both motor step pins to low.
+   goToAngle - Moves the robot to face in an angle relative to it's starting position. Robot will turn CCW or CW based on which requires the shortest time. See function for visual example.
+   goToGoalCm- Moves the robot to a position based on it's current position in centimeters. First rotates the robot then moves in a straight line directly to the goal. See function for visual example.
+   squareCm  - Moves the robot in a square of a programable side length. Robot starts in the bottom of the square. See function for visual example.
+   circleCm  - Moves the robot in a CW or CCW circle of some diameter in centimeters. Diameter is based on the centerline of the robot (between two wheeles).
+   figure8   - Moves the robot in a figure eight starting at the center of the figure eight.
+   
+   NOTE: All functions in cm have an inches counterpart. For example, goToGoalCm for cm or goToGoalIn for in.
 */
 
 //includew all necessary libraries
@@ -132,7 +134,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 }
-
+/*
+  Ensures: Moves the robot forwards by rotating the wheels forwards for 1500 pulses.
+*/
 void forward() {
   Serial.println("forward function");
   digitalWrite(redLED, HIGH);//turn on red LED
@@ -151,6 +155,9 @@ void forward() {
   }
 }
 
+/*
+  Ensures: Moves the robot backwards by rotating the wheels backwards for 1500 pulses.
+*/
 void reverse(){
 
   Serial.println("forward function");
@@ -171,7 +178,11 @@ void reverse(){
 
 }
 
-// 1 for pivot left, 0 for pivot right
+/*
+  Ensures: Pivots robots by rotating the corresponding wheel 1012 pulses. For a pivot CCW, the right wheel is powered and for a pivot CW, the left wheel is powered.
+
+  int direction: For a CCW, direction = 1, for a CW direction, direction = 0
+*/
 void pivot(int direction){
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
@@ -190,12 +201,18 @@ void pivot(int direction){
       delayMicroseconds(stepTime);
       digitalWrite(ltStepPin, LOW);
       delayMicroseconds(stepTime);
+      delayMicroseconds(1000);
     }
 
   }
 
 }
 
+/*
+  Ensures: Turns robots by rotating the outside wheel 1600 pulses. The inside wheel moves every third pulse, therefore moving inner wheel 1/3rd the speed.
+
+  int direction: For a CW, direction = 1, for a CCW direction, direction = 0
+*/
 void turn(int direction){
   Serial.println("turn function");
   digitalWrite(redLED, HIGH);//turn on red LED
@@ -205,25 +222,24 @@ void turn(int direction){
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
  
-  if (direction == 1){
-    for (int x = 0; x < 1600; x++) {
+  if (direction == 1){ // if CW
+    for (int x = 0; x < 1600; x++) { // 1600 pulses on outside wheel
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
-      if (x % 3 ==0){
-      digitalWrite(rtStepPin, LOW);
+      if (x % 3 ==0){ // every third pulse
+      digitalWrite(rtStepPin, LOW);   //makes the right wheel reset its pins 1/3rd rate of left
       }
       digitalWrite(ltStepPin, LOW);
       delayMicroseconds(stepTime);
     } 
-    // Makes 800 pulses for making one full cycle rotation
-  } else {
-    for (int x = 0; x < 1212; x++) {
+  } else { //if CCW
+    for (int x = 0; x < 1600; x++) { // 1600 pulses on outside wheel
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
-      if (x % 8 ==0){
-      digitalWrite(ltStepPin, LOW);
+      if (x % 3 ==0){   // every third pulse
+      digitalWrite(ltStepPin, LOW); //makes the left wheel reset its pins 1/3rd rate of right
       }
       digitalWrite(rtStepPin, LOW);
       delayMicroseconds(stepTime);
@@ -232,7 +248,9 @@ void turn(int direction){
   delay(1000); // One second delay
 }
 /*
+   Ensures: Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
 
+   bool CW: If true, ropot spins CW. If false, spins CCW.
 
 */
 void spin(bool CW) {
@@ -244,9 +262,9 @@ void spin(bool CW) {
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
  
-    if (CW) {
+    if (CW) { // if CW, reverses right wheel
   digitalWrite(rtDirPin, LOW); // Enables the motor to move in opposite direction
- } else {
+ } else {// if CCW, reverses left wheel
  digitalWrite(ltDirPin, LOW); // Enables the motor to move in opposite direction
  }
  // Makes 800 pulses for making one full cycle rotation
@@ -258,7 +276,7 @@ void spin(bool CW) {
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
   }
-  
+  // reset pin direction
   if (CW) {
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in opposite direction
   } else {
@@ -430,7 +448,7 @@ void circleCm(float D){
   Serial.println("circle function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, HIGH);//turn on yellow LED
+  digitalWrite(ylwLED, LOW);//turn off yellow LED
 
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move forward
   digitalWrite(rtDirPin, HIGH);
@@ -484,6 +502,7 @@ void circleIn(float D){// in
           Negative Input: Performs a CCW circle then a CW circle
 */
 void figure8(float D){
+  digitalWrite(ylwLED, HIGH);//turn off yellow LED
   circleIn(D);
   circleIn(-1*D);
 
