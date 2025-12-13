@@ -18,11 +18,11 @@
    circleCm  - Moves the robot in a CW or CCW circle of some diameter in centimeters. Diameter is based on the centerline of the robot (between two wheeles).
    figure8   - Moves the robot in a figure eight starting at the center of the figure eight.
    
-   NOTE: All functions in cm have an inches counterpart. For example, goToGoalCm for cm or goToGoalIn for in.
+   NOTE: Most functions in cm have an inches counterpart. For example, goToGoalCm for cm or goToGoalIn for in.
 */
 
 //includew all necessary libraries
-#include <Arduino.h>//include for PlatformIO Ide
+#include <Arduino.h>
 #include <AccelStepper.h>//include the stepper motor library
 #include <MultiStepper.h>//include multiple stepper motor library
 
