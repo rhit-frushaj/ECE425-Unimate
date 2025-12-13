@@ -96,7 +96,6 @@ void init_stepper(){
 }
 
 void setup() {
-  // put your setup code here, to run once:
   init_stepper();
   Serial.begin(115200);
   delay(1000);
@@ -127,8 +126,8 @@ void setup() {
   // goToGoalIn(36, 48);
   // delay(5000);
   // goToGoalIn(-24,-24);
-  // squareIn(36);
-  figure8(36);
+  // squareIn(24);
+  // figure8(36);
 
 }
 
@@ -355,8 +354,12 @@ void goToGoalCm(float xg, float yg){ // cm
   float yc = 0;
   float dc=0;
   float thetag = atan(yg/xg); //calculate desired angle
-  if ((xg <0 && yg < 0) || (xg > 0 && yg < 0)){ // if point lies in 3 or 4th quadrant must add 180 degrees to angle
+  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)){ // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
     thetag = thetag+ PI;
+  } else if (xg >0 && yg < 0 ){ // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2*PI;
+  } else if (xg == 0 && yg < 0){ //special case for 90 degree right turn
+    thetag = 3*PI/2;
   }
   goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
   float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg)); //calcule distance in cm for robot to travel
