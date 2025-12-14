@@ -135,7 +135,7 @@ void forward(float distance) {
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
    
-  int steps = ceil((distance*8.5*PI)/800.0); //this converts based on wheel diameter to steps from distance in cm
+  int steps = (int)ceil((distance*800.0)/(8.5*PI)); //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors forward for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
     digitalWrite(rtStepPin, HIGH);
@@ -159,7 +159,8 @@ void reverse(float distance){
   digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, LOW); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, LOW); // Enables the motor to move in a particular direction
-   int steps = ceil((distance*8.5*PI)/800.0); //this converts based on wheel diameter to steps from distance in cm
+  
+  int steps = (int)ceil((distance*800.0)/(8.5*PI)); //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors backwards for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
     digitalWrite(rtStepPin, HIGH);
