@@ -6,8 +6,8 @@
    The motions will be forward, reverse, pivot, spin, turn, stop, go to angle, go to goal, move in a circle, square, and figure eight.
    
    The primary functions created are:
-   forward   - Moves the robot forwards by rotating the wheels forwards for 1500 pulses.
-   reverse   - Moves the robot backwards by rotating the wheels backwards for 1500 pulses.
+   forward   - Moves the robot forwards by rotating the wheels forwards for some distance in cm.
+   reverse   - Moves the robot backwards by rotating the wheels backwards for some distance in cm. Input should be positive.
    pivot     - Pivots robots by rotating the corresponding wheel 1012 pulses. For a pivot CCW, the right wheel is powered and for a pivot CW, the left wheel is powered.
    spin      - Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
    turn      - Turns robots by rotating the outside wheel 1600 pulses. The inside wheel moves every third pulse, therefore moving inner wheel 1/3rd the speed.
@@ -53,17 +53,6 @@ int pauseTime = 2500;   //time before robot moves
 int stepTime = 500;     //delay time between high and low on step pin
 int wait_time = 1000;   //delay for printing data
 
-//define encoder pins
-#define LEFT 0        //left encoder
-#define RIGHT 1       //right encoder
-const int ltEncoder = 18;        //left encoder pin (Mega Interrupt pins 2,3 18,19,20,21)
-const int rtEncoder = 19;        //right encoder pin (Mega Interrupt pins 2,3 18,19,20,21)
-volatile long encoder[2] = {0, 0};  //interrupt variable to hold number of encoder counts (left, right)
-int lastSpeed[2] = {0, 0};          //variable to hold encoder speed (left, right)
-int accumTicks[2] = {0, 0};         //variable to hold accumulated ticks since last reset
-
-float currentAngle = 0;
-
 //function to set all stepper motor variables, outputs and LEDs
 void init_stepper(){
   pinMode(rtStepPin, OUTPUT);//sets pin as output
@@ -102,9 +91,9 @@ void setup() {
   
   //Initial Demo
 
-  // forward();
-  // delay(1000);
-  // reverse();
+  forward(24*2.54); //going 2 feet but convert to cm
+  delay(1000);
+  reverse(24*2.54); //going back 2 feet but input is cm
   // delay(1000);
   // stop();
   // pivot(1); //left
@@ -135,17 +124,20 @@ void loop() {
   // put your main code here, to run repeatedly:
 }
 /*
-  Ensures: Moves the robot forwards by rotating the wheels forwards for 1500 pulses.
+  Ensures: Moves the robot forwards by rotating the wheels forwards for for some distance in cm.
+  float distance: Distance to move forwards in cm.
 */
-void forward() {
+void forward(float distance) {
   Serial.println("forward function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
   digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-  // Makes 1500 pulses 
-  for (int x = 0; x < 1500; x++) {
+   
+  int steps = ceil((distance*8.5*PI)/800.0); //this converts based on wheel diameter to steps from distance in cm
+  //Steps both motors forward for the num steps calculated for the input distance
+  for (int x = 0; x < steps; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
@@ -156,9 +148,10 @@ void forward() {
 }
 
 /*
-  Ensures: Moves the robot backwards by rotating the wheels backwards for 1500 pulses.
+  Ensures: Moves the robot backwards by rotating the wheels backwards for some distance in cm. 
+  floast distance: Distance in cm to move backwards. Input should be positive.
 */
-void reverse(){
+void reverse(float distance){
 
   Serial.println("forward function");
   digitalWrite(redLED, HIGH);//turn on red LED
@@ -166,8 +159,9 @@ void reverse(){
   digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, LOW); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, LOW); // Enables the motor to move in a particular direction
-  // Makes 1500 pulses 
-  for (int x = 0; x < 1500; x++) {
+   int steps = ceil((distance*8.5*PI)/800.0); //this converts based on wheel diameter to steps from distance in cm
+  //Steps both motors backwards for the num steps calculated for the input distance
+  for (int x = 0; x < steps; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
