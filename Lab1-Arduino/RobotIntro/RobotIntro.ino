@@ -225,7 +225,7 @@ void move1() {
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
   // Makes 800 pulses for making one full cycle rotation
-  for (int x = 0; x < 800; x++) {
+  for (int x = 0; x < 1600; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
@@ -233,7 +233,8 @@ void move1() {
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
   }
-  delay(1000); // One second delay
+  print_encoder_data();
+  delay(5000); // One second delay
   digitalWrite(ltDirPin, LOW); // Enables the motor to move in opposite direction
   digitalWrite(rtDirPin, LOW); // Enables the motor to move in opposite direction
   // Makes 800 pulses for making one full cycle rotation
@@ -245,7 +246,8 @@ void move1() {
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
   }
-  delay(1000); // One second delay
+  print_encoder_data();
+  // delay(1000); // One second delay
 }
 
 /*
@@ -433,7 +435,7 @@ void moveFigure8(int diam) {
 //// MAIN
 void setup()
 {
-  int baudrate = 9600; //serial monitor baud rate'
+  int baudrate = 115200; //serial monitor baud rate'
   init_stepper(); //set up stepper motor
 
   attachInterrupt(digitalPinToInterrupt(ltEncoder), LwheelSpeed, CHANGE);    //init the interrupt mode for the left encoder
@@ -443,6 +445,9 @@ void setup()
   Serial.begin(baudrate);     //start serial monitor communication
   Serial.println("Robot starting...Put ON TEST STAND");
   delay(pauseTime); //always wait 2.5 seconds before the robot moves
+
+  move1();
+
 }
 
 void loop()
@@ -451,12 +456,12 @@ void loop()
   // move1();//call move back and forth function
   // move2();//call move back and forth function with AccelStepper library functions
   // move3();//call move back and forth function with MultiStepper library functions
-  move4(); //move to target position with 2 different speeds - absolute position
+  // move4(); //move to target position with 2 different speeds - absolute position
   //  move5(); //move continuously with 2 different speeds
     // move6(); //move to target position with 2 different speeds - relative position
 
   //Uncomment to read Encoder Data (uncomment to read on serial monitor)
   //print_encoder_data();   //prints encoder data
 
-  delay(wait_time);               //wait to move robot or read data
+  // delay(wait_time);               //wait to move robot or read data
 }
