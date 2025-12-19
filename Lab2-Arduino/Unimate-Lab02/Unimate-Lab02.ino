@@ -203,7 +203,7 @@ void pivot(int direction){
 
   int direction: For a CW, direction = 1, for a CCW direction, direction = 0
 */
-void turn(int direction){
+void turn(int direction, int amount){
   Serial.println("turn function");
   digitalWrite(redLED, HIGH);//turn on red LED
   digitalWrite(grnLED, LOW);//turn off green LED
@@ -213,7 +213,7 @@ void turn(int direction){
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
  
   if (direction == 1){ // if CW
-    for (int x = 0; x < 1600; x++) { // 1600 pulses on outside wheel
+    for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -224,7 +224,7 @@ void turn(int direction){
       delayMicroseconds(stepTime);
     } 
   } else { //if CCW
-    for (int x = 0; x < 1600; x++) { // 1600 pulses on outside wheel
+    for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -418,7 +418,7 @@ void randomWander(){
   Serial.print("Random Direction: ");
   Serial.println(randomDirection);
 
-  long randomAction = random(0,5); //produces an output of 0, 1, or 2
+  long randomAction = random(0,6); //produces an output of 0, 1, or 2
   Serial.println(randomAction);
   long maxDist = 1201; //max steps it can do
   // if(randomAction == 0){ //if random action is 0
@@ -446,6 +446,9 @@ void randomWander(){
       Serial.println(theta);
       goToAngle(theta);
       break;
+    
+    case(5):
+      turn(randomDirection, random(0, maxDist/2));
  
     case(1): //random action where the robot spins some random amount
       digitalWrite(ltDirPin, !randomDirection); //if gets this we flip the random direction of
