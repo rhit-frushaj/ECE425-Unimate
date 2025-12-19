@@ -1,24 +1,18 @@
 /************************************
-   Lab1-ForReadCode.ino
-   Andrew Frush, Val Rumzis, 12.11.25
+   Unimate-Lab02.ino
+   Andrew Frush, Val Rumzis, 1.9.25
    ***********************************
-   This program will introduce using the stepper motor library to create motion algorithms for the robot.
-   The motions will be forward, reverse, pivot, spin, turn, stop, go to angle, go to goal, move in a circle, square, and figure eight.
+   The following program is an implimentation of two basic mobile robot behavior models. The first introduces a fleeing mechanical (potential fields) and the other a 
+   follow mechanic when with an object in front of the robot. Both have a collide mechanic stopping the robot when an object appears too close in front of the robot. 
    
    The primary functions created are:
-   forward   - Moves the robot forwards by rotating the wheels forwards for some distance in cm.
-   reverse   - Moves the robot backwards by rotating the wheels backwards for some distance in cm. Input should be positive.
-   pivot     - Pivots robots by rotating the corresponding wheel 1012 pulses. For a pivot CCW, the right wheel is powered and for a pivot CW, the left wheel is powered.
-   spin      - Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
-   turn      - Turns robots by rotating the outside wheel 1600 pulses. The inside wheel moves every third pulse, therefore moving inner wheel 1/3rd the speed.
-   stop      - Stops the motors from running by using the built in stop() method from the AccelStepper library
-   goToAngle - Moves the robot to face in an angle relative to it's starting position. Robot will turn CCW or CW based on which requires the shortest time. See function for visual example.
-   goToGoalCm- Moves the robot to a position based on it's current position in centimeters. First rotates the robot then moves in a straight line directly to the goal. See function for visual example.
-   squareCm  - Moves the robot in a square of a programable side length. Robot starts in the bottom of the square. See function for visual example.
-   circleCm  - Moves the robot in a CW or CCW circle of some diameter in centimeters. Diameter is based on the centerline of the robot (between two wheeles).
-   figure8   - Moves the robot in a figure eight starting at the center of the figure eight.
-   
-   NOTE: Most functions in cm have an inches counterpart. For example, goToGoalCm for cm or goToGoalIn for in.
+   randomWander(): The robot randomly moves forward, backward, spins, and turns turns at random amounts. Motor speed varies slightly.  
+   collide(): Stops the robot when a random object appears in front of the robot. Based on a static "too close" distance parameter.
+   runAway(): Impliments potential fields to repulse the robot away from walls and go in free directions. Utilizes goToGoal and goToAngel + lidar sensors.
+   follow():
+   smartWander():
+   smartFollow:
+
 */
 
 //includew all necessary libraries
@@ -92,6 +86,14 @@ void init_stepper(){
   digitalWrite(stepperEnable, stepperEnTrue);//turns on the stepper motor driver
   digitalWrite(enableLED, HIGH);//turn on enable LED
 }
+
+//funtion to set up all sonar/lidar sensors
+void init_sensors(){
+
+
+}
+
+
 
 void setup() {
   init_stepper();
@@ -463,7 +465,9 @@ void collide(){ //angry kid
 }
 
 void runAway(){ //shy kid
-
+  //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold. 
+  //I can imagine if it's put in a box that it will just bounce around and jitter. 
+  //To stop jittering we should make it only move if the move it bcan make is above a certain threshold.
 }
 
 void follow(){ //curious kid
