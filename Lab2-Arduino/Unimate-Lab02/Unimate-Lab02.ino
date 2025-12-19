@@ -102,20 +102,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  switch(currentState){
-    case(0): //This is the random wander state
-      running = true;
-      randomWander();
-      break;
-    case(1):
-
-      break;
-    case(2):
-      break;
-    case(3):
-      break;
-
-  }
+  smartWander();
+  // smartFollow();
   // delay(5000);
 }
 /*
@@ -421,20 +409,7 @@ void randomWander(){
   long randomAction = random(0,6); //produces an output of 0, 1, or 2
   Serial.println(randomAction);
   long maxDist = 1201; //max steps it can do
-  // if(randomAction == 0){ //if random action is 0
-  //   stepperRight.move(random(0,maxDist)); //sets the steps for the left and right motors to randomly go some distance
-  //   stepperLeft.move(random(0,maxDist));
 
-  //   //set random speed
-  //   stepperRight.setMaxSpeed(1.0*random(100, max_speed); //multiply by 1 to get it back to float
-  //   stepperLeft.setMaxSpeed(1.0*random(100, max_speed); //multiply by 1 to get it back to float
-    
-  // } else if(randomAction == 1){
-  //   float theta = 1.0*random(0,361); //random angle between 0-360, excludes 361
-  //   goToAngle(theta);
-  // }else if(randomAction == 2){
-  //   digitalWrite(ltStepPin, !randomDirection); //if gets this we flip the random direction of 
-  // }
   float theta;
   long lcount; 
   long rcount;
@@ -465,23 +440,6 @@ void randomWander(){
 
   }
 
-  // if (stepperRight.distanceToGo() == 0) {
-  //   // Random change to speed, position and acceleration
-  //   // Make sure we dont get 0 speed or accelerations
-  //   delay(1000);
-  //   stepperRight.moveTo(rand() % 200);
-  //   stepperRight.setMaxSpeed((rand() % 200) + 1);
-  //   stepperRight.setAcceleration((rand() % 200) + 1);
-  // }
-
-  // running = true;
-  // while(running){
-  //   running = stepperRight.run();
-  //   stepperLeft.run();
-
-  //   //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
-  // }
-
   int fasterMotor = max(lrandomSpeed, rrandomSpeed);
 
 
@@ -496,12 +454,42 @@ void randomWander(){
     
     lcount--;
     rcount--;
+    //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
   }
 }
 
+void collide(){ //angry kid
 
+}
 
+void runAway(){ //shy kid
 
+}
+
+void follow(){ //curious kid
+
+}
+
+void smartWander(){ //
+    switch(currentState){
+    case(0): //This is the random wander state
+      running = true;
+      randomWander();
+      break;
+    case(1):
+
+      break;
+    case(2):
+      break;
+    case(3):
+      break;
+
+  }
+}
+
+void smartFollow(){
+  
+}
 
 
 
