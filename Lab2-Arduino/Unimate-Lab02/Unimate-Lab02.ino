@@ -46,12 +46,21 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 
 #define stepperEnTrue false //variable for enabling stepper motor
 #define stepperEnFalse true //variable for disabling stepper motor
-#define max_speed 1000 //maximum stepper motor speed
+#define max_speed 1636 //maximum stepper motor speed
 #define max_accel 10000 //maximum motor acceleration
 
 int pauseTime = 2500;   //time before robot moves
 int stepTime = 500;     //delay time between high and low on step pin
 int wait_time = 1000;   //delay for printing data
+
+uint8_t currentState = 0; //Tracks the state robot is currently in
+// State Table 
+// 0 = randomWander
+// 1 = angryKid
+// 2 = shyKid
+// 3 = curiousKid
+// 4 = ...
+bool running = true; // global variable to keep whether the robot should be running or not, controls blocking
 
 //function to set all stepper motor variables, outputs and LEDs
 void init_stepper(){
@@ -88,40 +97,26 @@ void setup() {
   init_stepper();
   Serial.begin(115200);
   delay(1000);
-  
-  //Initial Demo
-
-  forward(24*2.54); //going 2 feet but convert to cm
-  delay(1000);
-  reverse(24*2.54); //going back 2 feet but input is cm
-  // delay(1000);
-  // stop();
-  // pivot(1); //left
-  // delay(1000);
-  // pivot(0); //right
-  // delay(1000);
-  // turn(1); //turn left
-  // delay(1000);
-  // turn(0); //turn right
-  // delay(1000);
-  // spin(true); //left
-  // delay(1000);
-  // spin(false);
-  // delay(1000);
-  // stop();
-
-  //Advanced Features Demo  
-  // delay(5000);
-  // goToGoalIn(36, 48);
-  // delay(5000);
-  // goToGoalIn(-24,-24);
-  // squareIn(24);
-  // figure8(36);
-
+  forward(10);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  switch(currentState){
+    case(0): //This is the random wander state
+      running = true;
+      randomWander();
+      break;
+    case(1):
+
+      break;
+    case(2):
+      break;
+    case(3):
+      break;
+
+  }
+  // delay(5000);
 }
 /*
   Ensures: Moves the robot forwards by rotating the wheels forwards for for some distance in cm.
@@ -304,6 +299,7 @@ void stop(){
   float thetag: Angle goal to turn to, positive only between 0 -> 360 degrees.
 */
 void goToAngle(float thetag){ // degrees
+  Serial.println("Made it to angle");
   float drift = 1.02; //added to artificially correct for the overshoot/ compounding error during square
   thetag *= drift;
   digitalWrite(rtDirPin, HIGH); //sets both motors forward
@@ -315,7 +311,13 @@ void goToAngle(float thetag){ // degrees
   } else { 
     digitalWrite(ltDirPin, LOW); //otherwise rotates CW, left motor reverses
   }
+  running = true;
   while (thetac < thetag){ //main stepping loop, stops when current angle is equal to or greater than target angle
+      // prevents this from being blocking, uses global variable to break free if necessary
+      if(running == false){
+        Serial.println("breaking");
+        break;
+      }
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -324,6 +326,7 @@ void goToAngle(float thetag){ // degrees
       delayMicroseconds(stepTime);
       thetac += 1530.0/8600.0; //calculated amount the robot turns per one step of both motors in opposite directions
       delayMicroseconds(1000); //artificially added delay to help reduce overshoot/momentum
+
     }
 }
 
@@ -397,24 +400,100 @@ void goToGoalIn(float xg, float yg){ // in
 }
 
 /*
-  Ensures: Moves the robot in an apparently random fashion when viewed. 
+  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, random spins, and random forward and backwards
 
 */
 void randomWander(){
 //Andrew Note: I think we should generate a random number between a min and max speed then run the motors at those in a random direction. 
 // To spice things if the nunber is divisible by 5 or something like that then we could have it perform moveForward(random distance) and divisible by 3 could be random go to angle? 
+    
+  //sets lights to green only on
+  digitalWrite(grnLED, HIGH);
+  digitalWrite(redLED, LOW);
+  digitalWrite(ylwLED, LOW);
+
+  long randomDirection = random(0,2); //gives a random number either 0 or 1 (excluses 2)
+  digitalWrite(rtDirPin, randomDirection); //set both motors to be same random direction
+  digitalWrite(ltDirPin, randomDirection);
+  Serial.print("Random Direction: ");
+  Serial.println(randomDirection);
+
+  long randomAction = random(0,5); //produces an output of 0, 1, or 2
+  Serial.println(randomAction);
+  long maxDist = 1201; //max steps it can do
+  // if(randomAction == 0){ //if random action is 0
+  //   stepperRight.move(random(0,maxDist)); //sets the steps for the left and right motors to randomly go some distance
+  //   stepperLeft.move(random(0,maxDist));
+
+  //   //set random speed
+  //   stepperRight.setMaxSpeed(1.0*random(100, max_speed); //multiply by 1 to get it back to float
+  //   stepperLeft.setMaxSpeed(1.0*random(100, max_speed); //multiply by 1 to get it back to float
+    
+  // } else if(randomAction == 1){
+  //   float theta = 1.0*random(0,361); //random angle between 0-360, excludes 361
+  //   goToAngle(theta);
+  // }else if(randomAction == 2){
+  //   digitalWrite(ltStepPin, !randomDirection); //if gets this we flip the random direction of 
+  // }
+  float theta;
+  long lcount; 
+  long rcount;
+  long lrandomSpeed; //currently no functionality to make it have different speeds on the wheels
+  long rrandomSpeed;
+  switch(randomAction){
+    case(0): //Random action where the robot turns to some random angle
+      theta = random(0, 36001) / 100.0;  // random float between 0.00 → 360.00
+      Serial.println(theta);
+      goToAngle(theta);
+      break;
+ 
+    case(1): //random action where the robot spins some random amount
+      digitalWrite(ltDirPin, !randomDirection); //if gets this we flip the random direction of
+
+    case(3):
+
+    case(4):
+
+    case(2): //random action where the robot drives forward or backwards by some random amount
+      lcount = random(0, maxDist);
+      rcount =random(0, maxDist);
+      rrandomSpeed = random(.5, 3);
+      lrandomSpeed = rrandomSpeed;
+
+  }
+
+  // if (stepperRight.distanceToGo() == 0) {
+  //   // Random change to speed, position and acceleration
+  //   // Make sure we dont get 0 speed or accelerations
+  //   delay(1000);
+  //   stepperRight.moveTo(rand() % 200);
+  //   stepperRight.setMaxSpeed((rand() % 200) + 1);
+  //   stepperRight.setAcceleration((rand() % 200) + 1);
+  // }
+
+  // running = true;
+  // while(running){
+  //   running = stepperRight.run();
+  //   stepperLeft.run();
+
+  //   //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
+  // }
+
+  int fasterMotor = max(lrandomSpeed, rrandomSpeed);
+
+
+  while((lcount > 0 || rcount > 0) && running){
+    
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
-   if (stepper.distanceToGo() == 0)
-    {
-    // Random change to speed, position and acceleration
-    // Make sure we dont get 0 speed or accelerations
-    delay(1000);
-    stepper.moveTo(rand() % 200);
-    stepper.setMaxSpeed((rand() % 200) + 1);
-    stepper.setAcceleration((rand() % 200) + 1);
-    }
-    stepper.run();
+    // delayMicroseconds(rrandomSpeed);
+    delay(rrandomSpeed);
+    digitalWrite(rtStepPin, LOW);
+    digitalWrite(ltStepPin, LOW);
+    
+    lcount--;
+    rcount--;
+  }
 }
 
 
