@@ -403,7 +403,18 @@ void goToGoalIn(float xg, float yg){ // in
 void randomWander(){
 //Andrew Note: I think we should generate a random number between a min and max speed then run the motors at those in a random direction. 
 // To spice things if the nunber is divisible by 5 or something like that then we could have it perform moveForward(random distance) and divisible by 3 could be random go to angle? 
-
+    digitalWrite(rtStepPin, HIGH);
+    digitalWrite(ltStepPin, HIGH);
+   if (stepper.distanceToGo() == 0)
+    {
+    // Random change to speed, position and acceleration
+    // Make sure we dont get 0 speed or accelerations
+    delay(1000);
+    stepper.moveTo(rand() % 200);
+    stepper.setMaxSpeed((rand() % 200) + 1);
+    stepper.setAcceleration((rand() % 200) + 1);
+    }
+    stepper.run();
 }
 
 
