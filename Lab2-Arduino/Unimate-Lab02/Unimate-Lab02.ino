@@ -34,6 +34,12 @@ int leds[3] = {5,6,7};      //array of LED pin numbers
 #define ltStepPin 52 //left stepper motor step pin 
 #define ltDirPin 53  //left stepper motor direction pin 
 
+//define sensor pin numbers
+#define frontLdr 10 //lidar
+#define backLdr 11
+#define leftLdr 12
+#define rightLdr 13
+
 AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);//create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
 AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);//create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
 MultiStepper steppers;//create instance to control multiple steppers at the same time
@@ -89,7 +95,12 @@ void init_stepper(){
 
 //funtion to set up all sonar/lidar sensors
 void init_sensors(){
+  pinMode(frontLdr, OUTPUT); //lidar setup
+  pinMode(backLdr, OUTPUT);
+  pinMode(leftLdr, OUTPUT);
+  pinMode(rightLdr, OUTPUT);
 
+  //sonar setup
 
 }
 
@@ -97,14 +108,20 @@ void init_sensors(){
 
 void setup() {
   init_stepper();
+  init_sensors();
   Serial.begin(115200);
   delay(1000);
   forward(10);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  smartWander();
+  
+  int front = read_lidar(frontLdr);
+
+  Serial.print("f: ");
+  Serial.println(front);
+
+  // smartWander();
   // smartFollow();
   // delay(5000);
 }
@@ -462,12 +479,14 @@ void randomWander(){
 
 void collide(){ //angry kid
 
+  
+
 }
 
 void runAway(){ //shy kid
   //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold. 
   //I can imagine if it's put in a box that it will just bounce around and jitter. 
-  //To stop jittering we should make it only move if the move it bcan make is above a certain threshold.
+  //To stop jittering we should make it only move if the move it can make is above a certain threshold.
 }
 
 void follow(){ //curious kid
@@ -495,5 +514,13 @@ void smartFollow(){
   
 }
 
+// reads a lidar given a pin - code given
+int read_lidar(int pin) {
+  int d;
+  int16_t t = pulseIn(pin, HIGH);
+  d = (t - 1000) * 3 / 40;
+  if (t == 0 || t > 1850 || d < 0) { d = 0; }
+  return d;
+}
 
 
