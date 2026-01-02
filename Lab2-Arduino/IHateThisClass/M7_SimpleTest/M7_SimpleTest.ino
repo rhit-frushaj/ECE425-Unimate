@@ -1,34 +1,4 @@
 
-// #include<RPC.h>
-
-// using namespace rtos;
-
-// Thread testThread;
-
-// void setup(){
-//   Serial.begin(115200);
-//   RPC.begin();
-//   testThread.start(printAdd);
-// }
-
-// void loop(){
-
-
-// }
-
-// void printAdd(){
-// while(true){
-//   Serial.print("Number:");
-//   // Serial.println(RPC.call("add", 5, 10));
-//   int x = 5;
-//   int y = 4;
-//   int result = RPC.call("add", x, y).as<int>();
-//   // int result = x+y;
-//   Serial.println(result);
-//   delay(100);
-// }
-// }
-
 #include "Arduino.h"
 #include "RPC.h"
 

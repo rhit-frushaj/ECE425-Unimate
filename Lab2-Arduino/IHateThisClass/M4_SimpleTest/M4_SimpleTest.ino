@@ -1,20 +1,4 @@
 
-// #include<RPC.h>
-
-// void setup(){
-
-//   RPC.begin();
-//   RPC.bind("add", add);
-// }
-
-// void loop(){
-
-// }
-
-// int add(int x, int y){
-//   return x + y;
-// }
-
 #include "Arduino.h"
 #include "RPC.h"
 
