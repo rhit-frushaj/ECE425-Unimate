@@ -60,6 +60,7 @@ uint8_t currentState = 0; //Tracks the state robot is currently in
 
 bool running = true; // global variable to keep whether the robot should be running or not, controls blocking
 // // Data to keep the lidar sensor data - taken from example code
+
 struct lidar {
   int front;
   int back;
@@ -160,6 +161,9 @@ void forward(float distance) {
   int steps = (int)ceil((distance*800.0)/(8.5*PI)); //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors forward for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
+    if(!running){
+      break;
+    }
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
@@ -241,7 +245,7 @@ void turn(int direction, int amount){
  
   if (direction == 1){ // if CW
     for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
-      if(!running){
+      if(running == false){
         break;
       }
       digitalWrite(rtStepPin, HIGH);
@@ -255,7 +259,7 @@ void turn(int direction, int amount){
     } 
   } else { //if CCW
     for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
-      if(!running){
+      if(running == false){
         break;
       }
       digitalWrite(rtStepPin, HIGH);
@@ -437,71 +441,70 @@ void goToGoalIn(float xg, float yg){ // in
 
 */
 void randomWander(){
-//Andrew Note: I think we should generate a random number between a min and max speed then run the motors at those in a random direction. 
-// To spice things if the nunber is divisible by 5 or something like that then we could have it perform moveForward(random distance) and divisible by 3 could be random go to angle? 
+// //Andrew Note: I think we should generate a random number between a min and max speed then run the motors at those in a random direction. 
+// // To spice things if the nunber is divisible by 5 or something like that then we could have it perform moveForward(random distance) and divisible by 3 could be random go to angle? 
     
-  //sets lights to green only on
-  digitalWrite(grnLED, HIGH);
-  digitalWrite(redLED, LOW);
-  digitalWrite(ylwLED, LOW);
+//   //sets lights to green only on
+//   digitalWrite(grnLED, HIGH);
+//   digitalWrite(redLED, LOW);
+//   digitalWrite(ylwLED, LOW);
 
-  long randomDirection = random(0,2); //gives a random number either 0 or 1 (excluses 2)
-  digitalWrite(rtDirPin, randomDirection); //set both motors to be same random direction
-  digitalWrite(ltDirPin, randomDirection);
-  Serial.print("Random Direction: ");
-  Serial.println(randomDirection);
+//   long randomDirection = random(0,2); //gives a random number either 0 or 1 (excluses 2)
+//   digitalWrite(rtDirPin, randomDirection); //set both motors to be same random direction
+//   digitalWrite(ltDirPin, randomDirection);
+//   Serial.print("Random Direction: ");
+//   Serial.println(randomDirection);
 
-  long randomAction = random(0,6); //produces an output of 0, 1, or 2
-  Serial.println(randomAction);
-  long maxDist = 1201; //max steps it can do
+//   long randomAction = random(0,6); //produces an output of 0, 1, or 2
+//   Serial.println(randomAction);
+//   long maxDist = 1201; //max steps it can do
 
-  float theta;
-  long lcount; 
-  long rcount;
-  long lrandomSpeed; //currently no functionality to make it have different speeds on the wheels
-  long rrandomSpeed;
-  switch(randomAction){
-    case(0): //Random action where the robot turns to some random angle
-      theta = random(0, 36001) / 100.0;  // random float between 0.00 → 360.00
-      Serial.println(theta);
-      goToAngle(theta);
-      break;
+//   float theta;
+//   long lcount; 
+//   long rcount;
+//   long lrandomSpeed; //currently no functionality to make it have different speeds on the wheels
+//   long rrandomSpeed;
+//   switch(randomAction){
+//     case(0): //Random action where the robot turns to some random angle
+//       theta = random(0, 36001) / 100.0;  // random float between 0.00 → 360.00
+//       Serial.println(theta);
+//       goToAngle(theta);
+//       break;
     
-    case(5):
-      turn(randomDirection, random(0, maxDist/2));
- 
-    case(1): //random action where the robot spins some random amount
-      digitalWrite(ltDirPin, !randomDirection); //if gets this we flip the random direction of
+//     case(5):
+//       turn(randomDirection, random(0, maxDist/2));
+//       break;
 
-    case(3):
+//     case(1): //random action where the robot spins some random amount
+//       digitalWrite(ltDirPin, !randomDirection); //if gets this we flip the random direction of
 
-    case(4):
+//     case(3):
 
-    case(2): //random action where the robot drives forward or backwards by some random amount
-      lcount = random(0, maxDist);
-      rcount =random(0, maxDist);
-      rrandomSpeed = random(.5, 3);
-      lrandomSpeed = rrandomSpeed;
+//     case(4):
 
-  }
+//     case(2): //random action where the robot drives forward or backwards by some random amount
+//       lcount = random(0, maxDist);
+//       rcount =random(0, maxDist);
+//       rrandomSpeed = random(.5, 3);
+//       break;
+//   }
 
-  int fasterMotor = max(lrandomSpeed, rrandomSpeed);
+//   while((lcount > 0 || rcount > 0) && running){
 
-
-  while((lcount > 0 || rcount > 0) && running){
-
-    digitalWrite(rtStepPin, HIGH);
-    digitalWrite(ltStepPin, HIGH);
-    // delayMicroseconds(rrandomSpeed);
-    delay(rrandomSpeed);
-    digitalWrite(rtStepPin, LOW);
-    digitalWrite(ltStepPin, LOW);
+//     digitalWrite(rtStepPin, HIGH);
+//     digitalWrite(ltStepPin, HIGH);
+//     // delayMicroseconds(rrandomSpeed);
+//     delay(rrandomSpeed);
+//     digitalWrite(rtStepPin, LOW);
+//     digitalWrite(ltStepPin, LOW);
     
-    lcount--;
-    rcount--;
-    //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
-    Serial.println("Wandering Randomly");
-  }
+//     lcount--;
+//     rcount--;
+//     //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
+//     Serial.println("Wandering Randomly");
+//   }
+  forward(100);
+
 }
 
 
