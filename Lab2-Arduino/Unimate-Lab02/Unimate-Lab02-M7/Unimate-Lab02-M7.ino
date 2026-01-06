@@ -404,7 +404,10 @@ void goToGoalCm(float xg, float yg){ // cm
 
   delay(100);
   while (dg >= dc){ //main loop advancing robot until it's current position equales or exceedes the target distance
-    digitalWrite(rtStepPin, HIGH);
+    if(!running){
+      break;
+    }
+   digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
     digitalWrite(rtStepPin, LOW);
@@ -504,7 +507,21 @@ void randomWander(){
 //     Serial.println("Wandering Randomly");
 //   }
   forward(100);
-
+   int movementStep = 1000;
+   //sets lights to green only on
+   digitalWrite(grnLED, HIGH);
+   digitalWrite(redLED, LOW);
+   digitalWrite(ylwLED, LOW);
+   long randomBehavior = random(0,4); // chooses random behavior 0, 1, 2, 3
+   if (randomBehavior == 1){
+      forward(movementStep);
+   } else {
+      int randX = random(0,123) // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
+      int randY = random(0,123) // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
+      goToGoal(randX, randY);
+   }
+   
+   
 }
 
 
