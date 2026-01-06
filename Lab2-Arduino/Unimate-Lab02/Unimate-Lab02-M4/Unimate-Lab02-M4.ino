@@ -83,3 +83,13 @@ void init_sensors(){
   pinMode(leftLdr, INPUT);
   pinMode(rightLdr, INPUT);
 }
+
+int x_vector(){
+  
+}
+
+int y_vector(){
+  
+}
+
+

@@ -516,9 +516,9 @@ void randomWander(){
    if (randomBehavior == 1){
       forward(movementStep);
    } else {
-      int randX = random(0,123) // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
-      int randY = random(0,123) // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
-      goToGoal(randX, randY);
+      int randX = random(0,51); // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
+      int randY = random(0,51); // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
+      goToGoalCm(randX, randY);
    }
    
    
