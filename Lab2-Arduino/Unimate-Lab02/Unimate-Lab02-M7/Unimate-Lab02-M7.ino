@@ -506,18 +506,29 @@ void randomWander(){
 //     //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
 //     Serial.println("Wandering Randomly");
 //   }
-  forward(100);
-   int movementStep = 1000;
+  //forward(100);
+   int movementStep = random(0,501); // sets random pulse for the forward and turn behaviors to use.
    //sets lights to green only on
    digitalWrite(grnLED, HIGH);
    digitalWrite(redLED, LOW);
    digitalWrite(ylwLED, LOW);
    long randomBehavior = random(0,4); // chooses random behavior 0, 1, 2, 3
-   if (randomBehavior == 1){
+   if (randomBehavior == 0){
       forward(movementStep);
+   } elseif (randomBehavior == 1) {
+      int dir = random(0,2);
+      turn(dir, movementStep);
    } else {
-      int randX = random(0,51); // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
-      int randY = random(0,51); // sets a random x distance in cm to 0 to 122 cm (approx 4 ft)
+      int randX = random(0,31); // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
+      int directionXModifier = random(0,2);
+      if (directionXModifier == 1) {
+         randX *= -1;
+         }
+      int randY = random(0,31); // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
+      int directionYModifier = random(0,2);
+      if (directionYModifier == 1) {
+         randY *= -1;
+         }
       goToGoalCm(randX, randY);
    }
    
