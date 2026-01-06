@@ -70,8 +70,6 @@ struct lidar {
   MSGPACK_DEFINE_ARRAY(front, back, left, right);
 } dist{};
 
-using namespace rtos;
-Thread mainThread(osPriorityNormal, 4096); // Increased stack size to 4KB I guess?
 
 void setup() {
   Serial.begin(115200);
@@ -87,7 +85,6 @@ void setup() {
   RPC.bind("collide", collide);
 
   delay(500);
-  mainThread.start(controlLogic);
 }
 
 void loop() {
@@ -99,19 +96,6 @@ void loop() {
     smartWander();
 
 }
-
-/*
-  Ensures: This is the part that is constantly calling and reading the sensors
-*/
-void controlLogic(){
-  
-  while(true){
-    
-
-
-  }
-}
-
 
 
 //function to set all stepper motor variables, outputs and LEDs
@@ -443,7 +427,7 @@ void goToGoalIn(float xg, float yg){ // in
 
 */
 void randomWander(){
-  
+
    int movementStep = random(0,501); // sets random pulse for the forward and turn behaviors to use.
    //sets lights to green only on
    digitalWrite(grnLED, HIGH);
