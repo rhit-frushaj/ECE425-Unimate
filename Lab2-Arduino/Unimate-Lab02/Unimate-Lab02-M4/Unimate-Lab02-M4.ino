@@ -84,12 +84,5 @@ void init_sensors(){
   pinMode(rightLdr, INPUT);
 }
 
-int x_vector(){
-  
-}
-
-int y_vector(){
-  
-}
 
 

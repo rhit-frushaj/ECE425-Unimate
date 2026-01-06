@@ -50,7 +50,7 @@ int pauseTime = 2500;   //time before robot moves
 int stepTime = 500;     //delay time between high and low on step pin
 int wait_time = 1000;   //delay for printing data
 
-uint8_t currentState = 0; //Tracks the state robot is currently in
+uint8_t currentState = 2; //Tracks the state robot is currently in
 // State Table 
 // 0 = randomWander
 // 1 = angryKid
@@ -91,24 +91,23 @@ void setup() {
 }
 
 void loop() {
-  Serial.println(dist.front);
-  delay(100);
 
-}
-
-/*
-  Ensures: This is the part that is constantly calling and reading the sensors
-
-*/
-void controlLogic(){
-  
-  while(true){
-    
     // Read lidar data from M4
     dist = RPC.call("lidarRead").as<lidar>();
     // Serial.println(dist.front);
     delay(100); //delay on sensor reading, can be changed if needbe
     smartWander();
+
+}
+
+/*
+  Ensures: This is the part that is constantly calling and reading the sensors
+*/
+void controlLogic(){
+  
+  while(true){
+    
+
 
   }
 }
@@ -151,10 +150,10 @@ void init_stepper(){
   float distance: Distance to move forwards in cm.
 */
 void forward(float distance) {
-  Serial.println("forward function");
-  digitalWrite(redLED, HIGH);//turn on red LED
-  digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, LOW);//turn off yellow LED
+  // Serial.println("forward function");
+  // digitalWrite(redLED, HIGH);//turn on red LED
+  // digitalWrite(grnLED, LOW);//turn off green LED
+  // digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
    
@@ -235,10 +234,10 @@ void pivot(int direction){
   int direction: For a CW, direction = 1, for a CCW direction, direction = 0
 */
 void turn(int direction, int amount){
-  Serial.println("turn function");
-  digitalWrite(redLED, HIGH);//turn on red LED
-  digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, LOW);//turn off yellow LED
+  // Serial.println("turn function");
+  // digitalWrite(redLED, HIGH);//turn on red LED
+  // digitalWrite(grnLED, LOW);//turn off green LED
+  // digitalWrite(ylwLED, LOW);//turn off yellow LED
 
   digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
@@ -336,7 +335,7 @@ void stop(){
   float thetag: Angle goal to turn to, positive only between 0 -> 360 degrees.
 */
 void goToAngle(float thetag){ // degrees
-  Serial.println("Made it to angle");
+  // Serial.println("Made it to angle");
   float drift = 1.02; //added to artificially correct for the overshoot/ compounding error during square
   thetag *= drift;
   digitalWrite(rtDirPin, HIGH); //sets both motors forward
@@ -382,7 +381,7 @@ void goToAngle(float thetag){ // degrees
   float yg: Y coordinate of the desired ending location in centimeters.
 */
 void goToGoalCm(float xg, float yg){ // cm
-  Serial.println("Going to goal");
+  // Serial.println("Going to goal");
   digitalWrite(rtDirPin, HIGH); //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
   float xc = 0; //variable for tracking current position
@@ -444,69 +443,7 @@ void goToGoalIn(float xg, float yg){ // in
 
 */
 void randomWander(){
-// //Andrew Note: I think we should generate a random number between a min and max speed then run the motors at those in a random direction. 
-// // To spice things if the nunber is divisible by 5 or something like that then we could have it perform moveForward(random distance) and divisible by 3 could be random go to angle? 
-    
-//   //sets lights to green only on
-//   digitalWrite(grnLED, HIGH);
-//   digitalWrite(redLED, LOW);
-//   digitalWrite(ylwLED, LOW);
-
-//   long randomDirection = random(0,2); //gives a random number either 0 or 1 (excluses 2)
-//   digitalWrite(rtDirPin, randomDirection); //set both motors to be same random direction
-//   digitalWrite(ltDirPin, randomDirection);
-//   Serial.print("Random Direction: ");
-//   Serial.println(randomDirection);
-
-//   long randomAction = random(0,6); //produces an output of 0, 1, or 2
-//   Serial.println(randomAction);
-//   long maxDist = 1201; //max steps it can do
-
-//   float theta;
-//   long lcount; 
-//   long rcount;
-//   long lrandomSpeed; //currently no functionality to make it have different speeds on the wheels
-//   long rrandomSpeed;
-//   switch(randomAction){
-//     case(0): //Random action where the robot turns to some random angle
-//       theta = random(0, 36001) / 100.0;  // random float between 0.00 → 360.00
-//       Serial.println(theta);
-//       goToAngle(theta);
-//       break;
-    
-//     case(5):
-//       turn(randomDirection, random(0, maxDist/2));
-//       break;
-
-//     case(1): //random action where the robot spins some random amount
-//       digitalWrite(ltDirPin, !randomDirection); //if gets this we flip the random direction of
-
-//     case(3):
-
-//     case(4):
-
-//     case(2): //random action where the robot drives forward or backwards by some random amount
-//       lcount = random(0, maxDist);
-//       rcount =random(0, maxDist);
-//       rrandomSpeed = random(.5, 3);
-//       break;
-//   }
-
-//   while((lcount > 0 || rcount > 0) && running){
-
-//     digitalWrite(rtStepPin, HIGH);
-//     digitalWrite(ltStepPin, HIGH);
-//     // delayMicroseconds(rrandomSpeed);
-//     delay(rrandomSpeed);
-//     digitalWrite(rtStepPin, LOW);
-//     digitalWrite(ltStepPin, LOW);
-    
-//     lcount--;
-//     rcount--;
-//     //CHECK SENSORS HERE ASSUMING WE DON'T DO INTERUPTS (I think interupts would be best for the record, maybe??)
-//     Serial.println("Wandering Randomly");
-//   }
-  //forward(100);
+  
    int movementStep = random(0,501); // sets random pulse for the forward and turn behaviors to use.
    //sets lights to green only on
    digitalWrite(grnLED, HIGH);
@@ -515,7 +452,7 @@ void randomWander(){
    long randomBehavior = random(0,4); // chooses random behavior 0, 1, 2, 3
    if (randomBehavior == 0){
       forward(movementStep);
-   } elseif (randomBehavior == 1) {
+   } else if (randomBehavior == 1) {
       int dir = random(0,2);
       turn(dir, movementStep);
    } else {
@@ -536,10 +473,36 @@ void randomWander(){
 }
 
 
-void runAway(){ //shy kid
-  //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold. 
-  //I can imagine if it's put in a box that it will just bounce around and jitter. 
-  //To stop jittering we should make it only move if the move it can make is above a certain threshold.
+// void runAway(){ //shy kid
+//   //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold. 
+//   //I can imagine if it's put in a box that it will just bounce around and jitter. 
+//   //To stop jittering we should make it only move if the move it can make is above a certain threshold.
+// }
+
+void runAway(){
+  digitalWrite(redLED, 0);
+  digitalWrite(ylwLED, 1);
+  digitalWrite(grnLED, 0);
+ Serial.println(
+  String("Sensor Values (Front, Back, Left, Right): ") +
+  dist.front + ", " +
+  dist.back + ", " +
+  dist.left + ", " +
+  dist.right
+);
+
+Serial.println(
+  String("Attempted Direction (") +
+  x_vector() + ", " +
+  y_vector() + ")"
+);
+  delay(1000);
+  float xc = 1.0 * x_vector();
+  float yc = 1.0 * y_vector();
+  float magnitude = sqrt((xc)*(xc)+(yc)*(yc));
+  if(magnitude > 3){ //only want to try to move if an object is close enough, may need to change how this works
+    goToGoalCm(x_vector(), y_vector());
+  }
 }
 
 void follow(){ //curious kid
@@ -552,9 +515,10 @@ void smartWander(){ //
       running = true;
       randomWander();
       break;
-    case(1):
+    case(1): //This is collide state
       break;
-    case(2):
+    case(2): //This is run away
+      runAway();
       break;
     case(3):
       break;
@@ -589,12 +553,21 @@ void collide(){
   running = false; //allows to break out of any loops
   currentState = 1; //Changes the current state to 1 (angry kid)
 
-
-  // while(dist.front <= 15){ // do not need to exclude 0 here because should stop before it gets that close
-  //   //stalls out here and does nothing untill the object is moved
-  //   delay(100);
-  // }
   delay(500); //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
   currentState = 0;
   running = true; //not sure if we want to keep this here might have to pass to something else, change state?
+}
+
+/*
+  Ensures: Returns the X component of the vector that points the opposite direction of obstacles
+*/
+int x_vector(){
+  return -1*((dist.front) - (dist.back));
+}
+
+/*
+  Ensures: Returns the Y component of the vector that points the opposite direction of obstacles
+*/
+int y_vector(){
+  return -1 * ((dist.left) - (dist.right));
 }
