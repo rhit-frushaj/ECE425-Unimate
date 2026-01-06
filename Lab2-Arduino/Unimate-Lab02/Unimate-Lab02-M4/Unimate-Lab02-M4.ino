@@ -12,7 +12,7 @@
 #define ylwLED 7
 #define redLED 5
 
-#define tooClose 15
+#define tooClose 5
 
 // Data structure for lidar
 struct lidar {
