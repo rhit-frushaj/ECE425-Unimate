@@ -92,7 +92,7 @@ void loop() {
     // Read lidar data from M4
     dist = RPC.call("lidarRead").as<lidar>();
     // Serial.println(dist.front);
-    delay(100); //delay on sensor reading, can be changed if needbe
+    delay(50); //delay on sensor reading, can be changed if needbe
     smartWander();
 
 }
@@ -480,12 +480,34 @@ Serial.println(
   x_vector() + ", " +
   y_vector() + ")"
 );
-  delay(1000);
-  float xc = 1.0 * x_vector();
-  float yc = 1.0 * y_vector();
-  float magnitude = sqrt((xc)*(xc)+(yc)*(yc));
-  if(magnitude > 3){ //only want to try to move if an object is close enough, may need to change how this works
-    goToGoalCm(x_vector(), y_vector());
+  float xc = -1 * x_vector();
+  float yc = -1 * y_vector();
+  digitalWrite(rtDirPin, HIGH); //sets to drive forward
+  digitalWrite(ltDirPin, HIGH);
+  float thetag = atan(yc/xc); //calculate desired angle
+  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)){ // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
+    thetag = thetag+ PI;
+  } else if (xc >0 && yc < 0 ){ // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2*PI;
+  } else if (xc == 0 && yc < 0){ //special case for 90 degree right turn
+    thetag = 3*PI/2;
+  }
+  if (xc < 6 && yc < 6) { //edge case logic for small deltas
+    if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30 && dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // checks if completeley obstructed on y and x and does not move
+      return;
+    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) { // sides obstructed but front back unobstructed
+        thetag = 0;
+    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // all obstructed but left and right
+        thetag = PI/2;
+    } else { // unobstructed on every side
+      return;
+    }
+  Serial.println(
+  String("Attempted Angle (rad)" +
+  thetag )
+);
+  goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
+  forward(8);
   }
 }
 
@@ -546,12 +568,27 @@ void collide(){
   Ensures: Returns the X component of the vector that points the opposite direction of obstacles
 */
 int x_vector(){
-  return -1*((dist.front) - (dist.back));
+  int frontDist = dist.front;
+  int backDist = dist.back;
+  if (frontDist > 30) {
+    frontDist = 30;
+  } else if (backDist > 30) {
+    backDist = 30;
+  }
+  
+  return -1 * ((30 - frontDist) - (30 - backDist));
 }
 
 /*
   Ensures: Returns the Y component of the vector that points the opposite direction of obstacles
 */
 int y_vector(){
-  return -1 * ((dist.left) - (dist.right));
+  int leftDist = dist.left;
+  int rightDist = dist.right;
+  if (leftDist > 30){
+    leftDist = 30;
+  } else if (rightDist > 30){
+    rightDist = 30;
+  }
+  return -1 * ((30 - dist.left) - (30 - dist.right));
 }

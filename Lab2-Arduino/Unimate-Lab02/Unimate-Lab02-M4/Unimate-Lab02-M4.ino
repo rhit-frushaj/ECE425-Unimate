@@ -44,7 +44,7 @@ void loop() {
   dist.left = read_lidar(leftLdr);
   dist.right = read_lidar(rightLdr);
   
-  if (dist.front <= tooClose && dist.front != 0){ //this is smart but I don't think it can stay, this would be active for all states not just when it's colide
+  if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){ //this is smart but I don't think it can stay, this would be active for all states not just when it's colide
     RPC.call("collide");
   }
 
