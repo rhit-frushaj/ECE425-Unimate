@@ -475,13 +475,11 @@ void runAway(){
   dist.right
 );
 
-Serial.println(
-  String("Attempted Direction (") +
-  x_vector() + ", " +
-  y_vector() + ")"
-);
-  float xc = -1 * x_vector();
-  float yc = -1 * y_vector();
+
+  float xc = -1 * x_vector(); // -1 for "avoid" behavior
+  float yc = -1 * y_vector(); // -1 for "avoid" behavior
+  Serial.println(String("Direction Vector: ") + xc + String(", ") + yc);
+
   digitalWrite(rtDirPin, HIGH); //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
   float thetag = atan(yc/xc); //calculate desired angle
@@ -492,23 +490,29 @@ Serial.println(
   } else if (xc == 0 && yc < 0){ //special case for 90 degree right turn
     thetag = 3*PI/2;
   }
-  if (xc < 6 && yc < 6) { //edge case logic for small deltas
+  if (abs(xc) < 6 && abs(yc) < 6) { //edge case logic for small deltas
     if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30 && dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // checks if completeley obstructed on y and x and does not move
+      Serial.println("Completely Surrounded");
       return;
     } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) { // sides obstructed but front back unobstructed
         thetag = 0;
+        Serial.println("Sides obstructed but front & back unobstructed");
     } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // all obstructed but left and right
         thetag = PI/2;
+        Serial.println("all obstructed but sides");
     } else { // unobstructed on every side
+    Serial.println("unobstructed on every side");
       return;
     }
-  Serial.println(
-  String("Attempted Angle (rad)" +
-  thetag )
-);
-  goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
-  forward(8);
+  
   }
+  Serial.println(
+  String("Attempted Angle (deg)"
+   ) + thetag*(180/PI)
+);
+    goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
+  //delay(30);
+  forward(5);
 }
 
 void follow(){ //curious kid
@@ -575,8 +579,13 @@ int x_vector(){
   } else if (backDist > 30) {
     backDist = 30;
   }
-  
-  return -1 * ((30 - frontDist) - (30 - backDist));
+  int netDist = frontDist - backDist;
+  if (netDist > 0){
+    netDist -= 30;
+  } else if (netDist < 0){
+    netDist += 30;
+  }
+  return -netDist;
 }
 
 /*
@@ -590,5 +599,11 @@ int y_vector(){
   } else if (rightDist > 30){
     rightDist = 30;
   }
-  return -1 * ((30 - dist.left) - (30 - dist.right));
+  int netDist = leftDist - rightDist;
+  if (netDist > 0){
+    netDist -= 30;
+  } else if (netDist < 0){
+    netDist += 30;
+  }
+  return -netDist;
 }
