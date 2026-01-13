@@ -36,7 +36,6 @@ int leds[3] = { 5, 6, 7 };  //array of LED pin numbers
 #define ltDirPin 53       //left stepper motor direction pin
 
 
-
 AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);  //create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
 AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);   //create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
 MultiStepper steppers;                                                 //create instance to control multiple steppers at the same time

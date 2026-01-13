@@ -7,15 +7,17 @@
 #define backLdr 11
 #define leftLdr 12
 #define rightLdr 13
-#define leftSnr 9
-#define rightSnr 8
-#define num_of_samples 5
+#define leftSnrEcho 3
+#define leftSnrTrig 2
+#define rightSnrEcho 8
+#define rightSnrTrig 9
+#define numSamples 5
 
 //LED connections
 #define ylwLED 7
 #define redLED 5
 
-#define tooClose 5
+#define tooClose 5 // collide distance in [cm]
 
 // Data structure for lidar
 struct lidar {
@@ -55,9 +57,9 @@ void loop() {
     tempRightLidar += read_lidar(rightLdr);
     tempLeftLidar += read_lidar(leftLdr);
     tempFrontLidar += read_lidar(frontLdr);
-    tempBackLidar = read_lidar(backLdr);
-    tempRightSonar = read_sonar(rightSnr);
-    tempLeftSonar = read_sonar(leftSnr);
+    tempBackLidar += read_lidar(backLdr);
+    tempRightSonar += read_sonar(rightSnrTrig, rightSnrEcho);
+    tempLeftSonar += read_sonar(leftSnrTrig, leftSnrEcho);
   }
 
 
@@ -106,21 +108,24 @@ void init_sensors() {
   pinMode(backLdr, INPUT);
   pinMode(leftLdr, INPUT);
   pinMode(rightLdr, INPUT);
-  pinMode(rightSnr, INPUT);
-  pinMode(leftSnr, INPUT);
+  pinMode(rightSnrEcho, INPUT);
+  pinMode(leftSnrEcho, INPUT);
+  pinMode(leftSnrTrig, OUTPUT);
+  pinMode(rightSnrTrig, OUTPUT);
 }
 
-int read_sonar(int pin) {
-  float velocity((331.5 + 0.6 * (float)(20)) * 100 / 1000000.0);
+int read_sonar(int trig, int echo) {
+  // float velocity((331.5 + 0.6 * (float)(20)) * 100 / 1000000.0);
   uint16_t distance, pulseWidthUs;
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW);
-  digitalWrite(pin, HIGH);            //Set the trig pin High
+  // pinMode(trig, OUTPUT);
+  digitalWrite(trig, LOW);
+  digitalWrite(trig, HIGH);            //Set the trig pin High
   delayMicroseconds(10);              //Delay of 10 microseconds
-  digitalWrite(pin, LOW);             //Set the trig pin Low
-  pinMode(pin, INPUT);                //Set the pin to input mode
-  pulseWidthUs = pulseIn(pin, HIGH);  //Detect the high level time on the echo pin, the output high level time represents the ultrasonic flight time (unit: us)
-  distance = pulseWidthUs * velocity / 2.0;
-  if (distance < 0 || distance > 50) { distance = 0; }
+  digitalWrite(trig, LOW);             //Set the trig pin Low
+  // pinMode(echo, INPUT);                //Set the pin to input mode
+  pulseWidthUs = pulseIn(echo, HIGH);  //Detect the high level time on the echo pin, the output high level time represents the ultrasonic flight time (unit: us)
+  // distance = pulseWidthUs * velocity / 2.0;
+  distance = pulseWidthUs / 58;
+  if (distance < 0 || distance > 30) { distance = 0; }
   return distance;
 }
