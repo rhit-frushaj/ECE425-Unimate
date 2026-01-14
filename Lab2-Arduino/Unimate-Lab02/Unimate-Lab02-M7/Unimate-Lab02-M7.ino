@@ -18,47 +18,46 @@
 //includew all necessary libraries
 #include <Arduino.h>
 #include <RPC.h>
-#include <AccelStepper.h>//include the stepper motor library
-#include <MultiStepper.h>//include multiple stepper motor library
+#include <AccelStepper.h>  //include the stepper motor library
+#include <MultiStepper.h>  //include multiple stepper motor library
 
 //state LEDs connections
 #define redLED 5            //red LED for displaying states
 #define grnLED 6            //green LED for displaying states
 #define ylwLED 7            //yellow LED for displaying states
 #define enableLED 13        //stepper enabled LED
-int leds[3] = {5,6,7};      //array of LED pin numbers
+int leds[3] = { 5, 6, 7 };  //array of LED pin numbers
 
 //define motor pin numbers
-#define stepperEnable 48    //stepper enable pin on stepStick 
-#define rtStepPin 50 //right stepper motor step pin 
-#define rtDirPin 51  // right stepper motor direction pin 
-#define ltStepPin 52 //left stepper motor step pin 
-#define ltDirPin 53  //left stepper motor direction pin 
+#define stepperEnable 48  //stepper enable pin on stepStick
+#define rtStepPin 50      //right stepper motor step pin
+#define rtDirPin 51       // right stepper motor direction pin
+#define ltStepPin 52      //left stepper motor step pin
+#define ltDirPin 53       //left stepper motor direction pin
 
 
+AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);  //create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
+AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);   //create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
+MultiStepper steppers;                                                 //create instance to control multiple steppers at the same time
 
-AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);//create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
-AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);//create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
-MultiStepper steppers;//create instance to control multiple steppers at the same time
+#define stepperEnTrue false  //variable for enabling stepper motor
+#define stepperEnFalse true  //variable for disabling stepper motor
+#define max_speed 1636       //maximum stepper motor speed
+#define max_accel 10000      //maximum motor acceleration
 
-#define stepperEnTrue false //variable for enabling stepper motor
-#define stepperEnFalse true //variable for disabling stepper motor
-#define max_speed 1636 //maximum stepper motor speed
-#define max_accel 10000 //maximum motor acceleration
+int pauseTime = 2500;  //time before robot moves
+int stepTime = 500;    //delay time between high and low on step pin
+int wait_time = 1000;  //delay for printing data
 
-int pauseTime = 2500;   //time before robot moves
-int stepTime = 500;     //delay time between high and low on step pin
-int wait_time = 1000;   //delay for printing data
-
-uint8_t currentState = 2; //Tracks the state robot is currently in
-// State Table 
+uint8_t currentState = 3;  //Tracks the state robot is currently in
+// State Table
 // 0 = randomWander
 // 1 = angryKid
 // 2 = shyKid
 // 3 = curiousKid
 // 4 = ...
 
-bool running = true; // global variable to keep whether the robot should be running or not, controls blocking
+bool running = true;  // global variable to keep whether the robot should be running or not, controls blocking
 // // Data to keep the lidar sensor data - taken from example code
 
 struct lidar {
@@ -66,22 +65,24 @@ struct lidar {
   int back;
   int left;
   int right;
+  int sonarLeft;
+  int sonarRight;
 
-  MSGPACK_DEFINE_ARRAY(front, back, left, right);
+  MSGPACK_DEFINE_ARRAY(front, back, left, right, sonarLeft, sonarRight);
 } dist{};
 
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  
+
   init_stepper();
-  
+
   if (RPC.cpu_id() == CM7_CPUID) {
     blink(ylwLED, 100);
   } else {
     blink(redLED, 100);
-  }  
+  }
   RPC.bind("collide", collide);
 
   delay(500);
@@ -89,44 +90,43 @@ void setup() {
 
 void loop() {
 
-    // Read lidar data from M4
-    dist = RPC.call("lidarRead").as<lidar>();
-    // Serial.println(dist.front);
-    delay(50); //delay on sensor reading, can be changed if needbe
-    smartWander();
-
+  // Read lidar data from M4
+  dist = RPC.call("lidarRead").as<lidar>();
+  // Serial.println(dist.front);
+  delay(50);  //delay on sensor reading, can be changed if needbe
+  smartWander();
 }
 
 
 //function to set all stepper motor variables, outputs and LEDs
-void init_stepper(){
-  pinMode(rtStepPin, OUTPUT);//sets pin as output
-  pinMode(rtDirPin, OUTPUT);//sets pin as output
-  pinMode(ltStepPin, OUTPUT);//sets pin as output
-  pinMode(ltDirPin, OUTPUT);//sets pin as output
-  pinMode(stepperEnable, OUTPUT);//sets pin as output
-  digitalWrite(stepperEnable, stepperEnFalse);//turns off the stepper motor driver
-  pinMode(enableLED, OUTPUT);//set enable LED as output
-  digitalWrite(enableLED, LOW);//turn off enable LED
-  pinMode(redLED, OUTPUT);//set red LED as output
-  pinMode(grnLED, OUTPUT);//set green LED as output
-  pinMode(ylwLED, OUTPUT);//set yellow LED as output
-  digitalWrite(redLED, HIGH);//turn on red LED
-  digitalWrite(ylwLED, HIGH);//turn on yellow LED
-  digitalWrite(grnLED, HIGH);//turn on green LED
-  delay(pauseTime / 5); //wait 0.5 seconds
-  digitalWrite(redLED, LOW);//turn off red LED
-  digitalWrite(ylwLED, LOW);//turn off yellow LED
-  digitalWrite(grnLED, LOW);//turn off green LED
+void init_stepper() {
+  pinMode(rtStepPin, OUTPUT);                   //sets pin as output
+  pinMode(rtDirPin, OUTPUT);                    //sets pin as output
+  pinMode(ltStepPin, OUTPUT);                   //sets pin as output
+  pinMode(ltDirPin, OUTPUT);                    //sets pin as output
+  pinMode(stepperEnable, OUTPUT);               //sets pin as output
+  digitalWrite(stepperEnable, stepperEnFalse);  //turns off the stepper motor driver
+  pinMode(enableLED, OUTPUT);                   //set enable LED as output
+  digitalWrite(enableLED, LOW);                 //turn off enable LED
+  pinMode(redLED, OUTPUT);                      //set red LED as output
+  pinMode(grnLED, OUTPUT);                      //set green LED as output
+  pinMode(ylwLED, OUTPUT);                      //set yellow LED as output
+  digitalWrite(redLED, HIGH);                   //turn on red LED
+  digitalWrite(ylwLED, HIGH);                   //turn on yellow LED
+  digitalWrite(grnLED, HIGH);                   //turn on green LED
+  delay(pauseTime / 5);                         //wait 0.5 seconds
+  digitalWrite(redLED, LOW);                    //turn off red LED
+  digitalWrite(ylwLED, LOW);                    //turn off yellow LED
+  digitalWrite(grnLED, LOW);                    //turn off green LED
 
-  stepperRight.setMaxSpeed(max_speed);//set the maximum permitted speed limited by processor and clock speed, no greater than 4000 steps/sec on Arduino
-  stepperRight.setAcceleration(max_accel);//set desired acceleration in steps/s^2
-  stepperLeft.setMaxSpeed(max_speed);//set the maximum permitted speed limited by processor and clock speed, no greater than 4000 steps/sec on Arduino
-  stepperLeft.setAcceleration(max_accel);//set desired acceleration in steps/s^2
-  steppers.addStepper(stepperLeft);//add left motor to MultiStepper
-  steppers.addStepper(stepperRight);//add right motor to MultiStepper
-  digitalWrite(stepperEnable, stepperEnTrue);//turns on the stepper motor driver
-  digitalWrite(enableLED, HIGH);//turn on enable LED
+  stepperRight.setMaxSpeed(max_speed);         //set the maximum permitted speed limited by processor and clock speed, no greater than 4000 steps/sec on Arduino
+  stepperRight.setAcceleration(max_accel);     //set desired acceleration in steps/s^2
+  stepperLeft.setMaxSpeed(max_speed);          //set the maximum permitted speed limited by processor and clock speed, no greater than 4000 steps/sec on Arduino
+  stepperLeft.setAcceleration(max_accel);      //set desired acceleration in steps/s^2
+  steppers.addStepper(stepperLeft);            //add left motor to MultiStepper
+  steppers.addStepper(stepperRight);           //add right motor to MultiStepper
+  digitalWrite(stepperEnable, stepperEnTrue);  //turns on the stepper motor driver
+  digitalWrite(enableLED, HIGH);               //turn on enable LED
 }
 
 /*
@@ -138,13 +138,13 @@ void forward(float distance) {
   // digitalWrite(redLED, HIGH);//turn on red LED
   // digitalWrite(grnLED, LOW);//turn off green LED
   // digitalWrite(ylwLED, LOW);//turn off yellow LED
-  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
-   
-  int steps = (int)ceil((distance*800.0)/(8.5*PI)); //this converts based on wheel diameter to steps from distance in cm
+  digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
+
+  int steps = (int)ceil((distance * 800.0) / (8.5 * PI));  //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors forward for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
-    if(!running){
+    if (!running) {
       break;
     }
     digitalWrite(rtStepPin, HIGH);
@@ -160,16 +160,16 @@ void forward(float distance) {
   Ensures: Moves the robot backwards by rotating the wheels backwards for some distance in cm. 
   floast distance: Distance in cm to move backwards. Input should be positive.
 */
-void reverse(float distance){
+void reverse(float distance) {
 
   Serial.println("forward function");
-  digitalWrite(redLED, HIGH);//turn on red LED
-  digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, LOW);//turn off yellow LED
-  digitalWrite(ltDirPin, LOW); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, LOW); // Enables the motor to move in a particular direction
-  
-  int steps = (int)ceil((distance*800.0)/(8.5*PI)); //this converts based on wheel diameter to steps from distance in cm
+  digitalWrite(redLED, HIGH);   //turn on red LED
+  digitalWrite(grnLED, LOW);    //turn off green LED
+  digitalWrite(ylwLED, LOW);    //turn off yellow LED
+  digitalWrite(ltDirPin, LOW);  // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, LOW);  // Enables the motor to move in a particular direction
+
+  int steps = (int)ceil((distance * 800.0) / (8.5 * PI));  //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors backwards for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
     digitalWrite(rtStepPin, HIGH);
@@ -179,7 +179,6 @@ void reverse(float distance){
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
   }
-
 }
 
 /*
@@ -187,11 +186,11 @@ void reverse(float distance){
 
   int direction: For a CCW, direction = 1, for a CW direction, direction = 0
 */
-void pivot(int direction){
-  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
+void pivot(int direction) {
+  digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
   int stepCount = 1012;
-  if (direction ==  1){
+  if (direction == 1) {
     for (int x = 0; x < stepCount; x++) {
       digitalWrite(rtStepPin, HIGH);
       delayMicroseconds(stepTime);
@@ -207,9 +206,7 @@ void pivot(int direction){
       delayMicroseconds(stepTime);
       delayMicroseconds(1000);
     }
-
   }
-
 }
 
 /*
@@ -217,45 +214,45 @@ void pivot(int direction){
 
   int direction: For a CW, direction = 1, for a CCW direction, direction = 0
 */
-void turn(int direction, int amount){
+void turn(int direction, int amount) {
   // Serial.println("turn function");
   // digitalWrite(redLED, HIGH);//turn on red LED
   // digitalWrite(grnLED, LOW);//turn off green LED
   // digitalWrite(ylwLED, LOW);//turn off yellow LED
 
-  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
- 
-  if (direction == 1){ // if CW
-    for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
-      if(running == false){
+  digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
+
+  if (direction == 1) {                 // if CW
+    for (int x = 0; x < amount; x++) {  // 1600 pulses on outside wheel
+      if (running == false) {
         break;
       }
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
-      if (x % 3 ==0){ // every third pulse
-      digitalWrite(rtStepPin, LOW);   //makes the right wheel reset its pins 1/3rd rate of left
+      if (x % 3 == 0) {                // every third pulse
+        digitalWrite(rtStepPin, LOW);  //makes the right wheel reset its pins 1/3rd rate of left
       }
       digitalWrite(ltStepPin, LOW);
       delayMicroseconds(stepTime);
-    } 
-  } else { //if CCW
-    for (int x = 0; x < amount; x++) { // 1600 pulses on outside wheel
-      if(running == false){
+    }
+  } else {                              //if CCW
+    for (int x = 0; x < amount; x++) {  // 1600 pulses on outside wheel
+      if (running == false) {
         break;
       }
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
       delayMicroseconds(stepTime);
-      if (x % 3 ==0){   // every third pulse
-      digitalWrite(ltStepPin, LOW); //makes the left wheel reset its pins 1/3rd rate of right
+      if (x % 3 == 0) {                // every third pulse
+        digitalWrite(ltStepPin, LOW);  //makes the left wheel reset its pins 1/3rd rate of right
       }
       digitalWrite(rtStepPin, LOW);
       delayMicroseconds(stepTime);
     }
   }
-  delay(1000); // One second delay
+  delay(1000);  // One second delay
 }
 /*
    Ensures: Spins robots by rotating both wheels in opposite directions. For CW, right wheel is reverse and left wheel is forwards. For CCW, left wheel is reverse and right wheel is forwards.
@@ -264,20 +261,20 @@ void turn(int direction, int amount){
 
 */
 void spin(bool CW) {
- 
+
   Serial.println("spin function");
-  digitalWrite(redLED, HIGH);//turn on red LED
-  digitalWrite(grnLED, LOW);//turn off green LED
-  digitalWrite(ylwLED, LOW);//turn off yellow LED
-  digitalWrite(ltDirPin, HIGH); // Enables the motor to move in a particular direction
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in a particular direction
- 
-    if (CW) { // if CW, reverses right wheel
-  digitalWrite(rtDirPin, LOW); // Enables the motor to move in opposite direction
- } else {// if CCW, reverses left wheel
- digitalWrite(ltDirPin, LOW); // Enables the motor to move in opposite direction
- }
- // Makes 800 pulses for making one full cycle rotation
+  digitalWrite(redLED, HIGH);    //turn on red LED
+  digitalWrite(grnLED, LOW);     //turn off green LED
+  digitalWrite(ylwLED, LOW);     //turn off yellow LED
+  digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
+  digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
+
+  if (CW) {                       // if CW, reverses right wheel
+    digitalWrite(rtDirPin, LOW);  // Enables the motor to move in opposite direction
+  } else {                        // if CCW, reverses left wheel
+    digitalWrite(ltDirPin, LOW);  // Enables the motor to move in opposite direction
+  }
+  // Makes 800 pulses for making one full cycle rotation
   for (int x = 0; x < 800; x++) {
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -288,20 +285,19 @@ void spin(bool CW) {
   }
   // reset pin direction
   if (CW) {
-  digitalWrite(rtDirPin, HIGH); // Enables the motor to move in opposite direction
+    digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in opposite direction
   } else {
- digitalWrite(ltDirPin, HIGH); // Enables the motor to move in opposite direction
- }
-  delay(1000); // One second delay
+    digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in opposite direction
+  }
+  delay(1000);  // One second delay
 }
 
 /*
   Ensures: stops the motors from running by using the built in stop() method from the AccelStepper library.
 */
-void stop(){
+void stop() {
   stepperRight.stop();
   stepperLeft.stop();
-
 }
 
 /*
@@ -318,36 +314,35 @@ void stop(){
 
   float thetag: Angle goal to turn to, positive only between 0 -> 360 degrees.
 */
-void goToAngle(float thetag){ // degrees
+void goToAngle(float thetag) {  // degrees
   // Serial.println("Made it to angle");
-  float drift = 1.02; //added to artificially correct for the overshoot/ compounding error during square
+  float drift = 1.02;  //added to artificially correct for the overshoot/ compounding error during square
   thetag *= drift;
-  digitalWrite(rtDirPin, HIGH); //sets both motors forward
+  digitalWrite(rtDirPin, HIGH);  //sets both motors forward
   digitalWrite(ltDirPin, HIGH);
   float thetac = 0;
-  if (thetag>180){ //if angle is greater than 180 want to rotate CCW, right motor reverses
+  if (thetag > 180) {  //if angle is greater than 180 want to rotate CCW, right motor reverses
     digitalWrite(rtDirPin, LOW);
-    thetag = abs(thetag-360); //calculates angle to rotate in opposite direction
-  } else { 
-    digitalWrite(ltDirPin, LOW); //otherwise rotates CW, left motor reverses
+    thetag = abs(thetag - 360);  //calculates angle to rotate in opposite direction
+  } else {
+    digitalWrite(ltDirPin, LOW);  //otherwise rotates CW, left motor reverses
   }
   running = true;
-  while (thetac < thetag){ //main stepping loop, stops when current angle is equal to or greater than target angle
-      // prevents this from being blocking, uses global variable to break free if necessary
-      if(running == false){
-        Serial.println("breaking");
-        break;
-      }
-      digitalWrite(rtStepPin, HIGH);
-      digitalWrite(ltStepPin, HIGH);
-      delayMicroseconds(stepTime);
-      digitalWrite(rtStepPin, LOW);
-      digitalWrite(ltStepPin, LOW);
-      delayMicroseconds(stepTime);
-      thetac += 1530.0/8600.0; //calculated amount the robot turns per one step of both motors in opposite directions
-      delayMicroseconds(1000); //artificially added delay to help reduce overshoot/momentum
-
+  while (thetac < thetag) {  //main stepping loop, stops when current angle is equal to or greater than target angle
+    // prevents this from being blocking, uses global variable to break free if necessary
+    if (running == false) {
+      Serial.println("breaking");
+      break;
     }
+    digitalWrite(rtStepPin, HIGH);
+    digitalWrite(ltStepPin, HIGH);
+    delayMicroseconds(stepTime);
+    digitalWrite(rtStepPin, LOW);
+    digitalWrite(ltStepPin, LOW);
+    delayMicroseconds(stepTime);
+    thetac += 1530.0 / 8600.0;  //calculated amount the robot turns per one step of both motors in opposite directions
+    delayMicroseconds(1000);    //artificially added delay to help reduce overshoot/momentum
+  }
 }
 
 /*
@@ -364,41 +359,40 @@ void goToAngle(float thetag){ // degrees
   float xg: X coordinate of the desired ending location in centimeters.
   float yg: Y coordinate of the desired ending location in centimeters.
 */
-void goToGoalCm(float xg, float yg){ // cm
+void goToGoalCm(float xg, float yg) {  // cm
   // Serial.println("Going to goal");
-  digitalWrite(rtDirPin, HIGH); //sets to drive forward
+  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
-  float xc = 0; //variable for tracking current position
+  float xc = 0;  //variable for tracking current position
   float yc = 0;
-  float dc=0;
-  float thetag = atan(yg/xg); //calculate desired angle
-  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)){ // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag+ PI;
-  } else if (xg >0 && yg < 0 ){ // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2*PI;
-  } else if (xg == 0 && yg < 0){ //special case for 90 degree right turn
-    thetag = 3*PI/2;
+  float dc = 0;
+  float thetag = atan(yg / xg);                     //calculate desired angle
+  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
+    thetag = thetag + PI;
+  } else if (xg > 0 && yg < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2 * PI;
+  } else if (xg == 0 && yg < 0) {  //special case for 90 degree right turn
+    thetag = 3 * PI / 2;
   }
-  goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
-  float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg)); //calcule distance in cm for robot to travel
+  goToAngle(thetag * (180 / PI));                                  //rotate robot to proper angle in degrees
+  float dg = sqrt((xc - xg) * (xc - xg) + (yc - yg) * (yc - yg));  //calcule distance in cm for robot to travel
 
-  digitalWrite(rtDirPin, HIGH); //set both motors back to drive forward after rotation occured
+  digitalWrite(rtDirPin, HIGH);  //set both motors back to drive forward after rotation occured
   digitalWrite(ltDirPin, HIGH);
 
   delay(100);
-  while (dg >= dc){ //main loop advancing robot until it's current position equales or exceedes the target distance
-    if(!running){
+  while (dg >= dc) {  //main loop advancing robot until it's current position equales or exceedes the target distance
+    if (!running) {
       break;
     }
-   digitalWrite(rtStepPin, HIGH);
+    digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc += (8.5*PI)/800; // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
-    delayMicroseconds(1000); //artificially added delay to slow down speed further
-
+    dc += (8.5 * PI) / 800;   // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
+    delayMicroseconds(1000);  //artificially added delay to slow down speed further
   }
 }
 
@@ -416,135 +410,174 @@ void goToGoalCm(float xg, float yg){ // cm
   float xg: X coordinate of the desired ending location in inches.
   float yg: Y coordinate of the desired ending location in inches.
 */
-void goToGoalIn(float xg, float yg){ // in
-  float xgcm=xg*2.54; //conversion to cm
-  float ygcm=yg*2.54;
-  goToGoalCm(xgcm,ygcm);
+void goToGoalIn(float xg, float yg) {  // in
+  float xgcm = xg * 2.54;              //conversion to cm
+  float ygcm = yg * 2.54;
+  goToGoalCm(xgcm, ygcm);
 }
 
 /*
   Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, random spins, and random forward and backwards
 
 */
-void randomWander(){
+void randomWander() {
 
-   int movementStep = random(0,501); // sets random pulse for the forward and turn behaviors to use.
-   //sets lights to green only on
-   digitalWrite(grnLED, HIGH);
-   digitalWrite(redLED, LOW);
-   digitalWrite(ylwLED, LOW);
-   long randomBehavior = random(0,4); // chooses random behavior 0, 1, 2, 3
-   if (randomBehavior == 0){
-      forward(movementStep);
-   } else if (randomBehavior == 1) {
-      int dir = random(0,2);
-      turn(dir, movementStep);
-   } else {
-      int randX = random(0,31); // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-      int directionXModifier = random(0,2);
-      if (directionXModifier == 1) {
-         randX *= -1;
-         }
-      int randY = random(0,31); // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-      int directionYModifier = random(0,2);
-      if (directionYModifier == 1) {
-         randY *= -1;
-         }
-      goToGoalCm(randX, randY);
-   }
-   
-   
+  int movementStep = random(0, 501);  // sets random pulse for the forward and turn behaviors to use.
+  //sets lights to green only on
+  digitalWrite(grnLED, HIGH);
+  digitalWrite(redLED, LOW);
+  digitalWrite(ylwLED, LOW);
+  long randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
+  if (randomBehavior == 0) {
+    forward(movementStep);
+  } else if (randomBehavior == 1) {
+    int dir = random(0, 2);
+    turn(dir, movementStep);
+  } else {
+    int randX = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
+    int directionXModifier = random(0, 2);
+    if (directionXModifier == 1) {
+      randX *= -1;
+    }
+    int randY = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
+    int directionYModifier = random(0, 2);
+    if (directionYModifier == 1) {
+      randY *= -1;
+    }
+    goToGoalCm(randX, randY);
+  }
 }
 
 
 // void runAway(){ //shy kid
-//   //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold. 
-//   //I can imagine if it's put in a box that it will just bounce around and jitter. 
+//   //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold.
+//   //I can imagine if it's put in a box that it will just bounce around and jitter.
 //   //To stop jittering we should make it only move if the move it can make is above a certain threshold.
 // }
 
-void runAway(){
+void runAway() {
   digitalWrite(redLED, 0);
   digitalWrite(ylwLED, 1);
   digitalWrite(grnLED, 0);
- Serial.println(
-  String("Sensor Values (Front, Back, Left, Right): ") +
-  dist.front + ", " +
-  dist.back + ", " +
-  dist.left + ", " +
-  dist.right
-);
+  Serial.println(
+    String("Sensor Values (Front, Back, Left, Right, Left Sonar, Right Sonar): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right + ", " + dist.sonarLeft + ", " + dist.sonarRight);
 
-
-  float xc = -1 * x_vector(); // -1 for "avoid" behavior
-  float yc = -1 * y_vector(); // -1 for "avoid" behavior
+  for (int i = 0; i < 50; i++) {
+    dist = RPC.call("lidarRead").as<lidar>();
+    delay(10);
+  }
+  int xc = -1 * x_vector();  // -1 for "avoid" behavior
+  int yc = -1 * y_vector();  // -1 for "avoid" behavior
   Serial.println(String("Direction Vector: ") + xc + String(", ") + yc);
 
-  digitalWrite(rtDirPin, HIGH); //sets to drive forward
+  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
-  float thetag = atan(yc/xc); //calculate desired angle
-  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)){ // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag+ PI;
-  } else if (xc >0 && yc < 0 ){ // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2*PI;
-  } else if (xc == 0 && yc < 0){ //special case for 90 degree right turn
-    thetag = 3*PI/2;
+  float thetag = atan(yc / xc);                     //calculate desired angle
+  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
+    thetag = thetag + PI;
+  } else if (xc > 0 && yc < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2 * PI;
+  } else if (xc == 0 && yc < 0) {  //special case for 90 degree right turn
+    thetag = 3 * PI / 2;
   }
-  if (abs(xc) < 6 && abs(yc) < 6) { //edge case logic for small deltas
-    if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30 && dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // checks if completeley obstructed on y and x and does not move
+
+  if (abs(xc) < 10 && abs(yc) < 10) {                                                                                                                    //edge case logic for small deltas
+    if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30 && dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // checks if completeley obstructed on y and x and does not move
       Serial.println("Completely Surrounded");
       return;
-    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) { // sides obstructed but front back unobstructed
-        thetag = 0;
-        Serial.println("Sides obstructed but front & back unobstructed");
-    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) { // all obstructed but left and right
-        thetag = PI/2;
-        Serial.println("all obstructed but sides");
-    } else { // unobstructed on every side
-    Serial.println("unobstructed on every side");
+    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) {  // sides obstructed but front back unobstructed
+      thetag = 0;
+      Serial.println("Sides obstructed but front & back unobstructed");
+      forward(25);
+      return;
+    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // all obstructed but left and right
+      thetag = PI / 2;
+      Serial.println("all obstructed but sides");
+    } else {  // unobstructed on every side
+      Serial.println("unobstructed on every side");
       return;
     }
-  
+  }
+
+  Serial.println(
+    String("Attempted Angle (deg)") + thetag * (180 / PI));
+  goToAngle(thetag * (180 / PI));  //rotate robot to proper angle in degrees
+
+  forward(25);
+}
+
+void follow() {  //curious kid
+  digitalWrite(redLED, 0);
+  digitalWrite(ylwLED, 1);
+  digitalWrite(grnLED, 0);
+  // Serial.println(
+  //   String("Sensor Values (Front, Back, Left, Right, Left Sonar, Right Sonar): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right + ", " + dist.sonarLeft + ", " + dist.sonarRight);
+
+  for (int i = 0; i < 50; i++) {
+    dist = RPC.call("lidarRead").as<lidar>();
+    delay(10);
+  }
+  int xc = x_vector();
+  int yc = y_vector();
+  Serial.println(String("Direction Vector: ") + xc + String(", ") + yc);
+
+  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
+  digitalWrite(ltDirPin, HIGH);
+  float thetag = atan(yc / xc);                     //calculate desired angle
+  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
+    thetag = thetag + PI;
+  } else if (xc > 0 && yc < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2 * PI;
+  } else if (xc == 0 && yc < 0) {  //special case for 90 degree right turn
+    thetag = 3 * PI / 2;
+  }
+  if (abs(xc) < 6 && abs(yc) < 6) {                                            //edge case logic for small deltas
+    if (dist.left > 0 && dist.right > 0 && dist.back > 0 && dist.front > 0) {  // checks if completeley obstructed on y and x and does not move
+      Serial.println("Completely Surrounded");
+      return;
+    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) {  // sides obstructed but front back unobstructed
+      thetag = 0;
+      Serial.println("Sides obstructed but front & back unobstructed");
+    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // all obstructed but left and right
+      thetag = PI / 2;
+      Serial.println("all obstructed but sides");
+    } else {  // unobstructed on every side
+      Serial.println("unobstructed on every side");
+      return;
+    }
   }
   Serial.println(
-  String("Attempted Angle (deg)"
-   ) + thetag*(180/PI)
-);
-    goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
-  //delay(30);
-  forward(5);
+    String("Attempted Angle (deg)") + thetag * (180 / PI));
+  goToAngle(thetag * (180 / PI));  //rotate robot to proper angle in degrees
+
+  forward(25);
 }
 
-void follow(){ //curious kid
-
-}
-
-void smartWander(){ //
-    switch(currentState){
-    case(0): //This is the random wander state
+void smartWander() {  //
+  switch (currentState) {
+    case (0):  //This is the random wander state
       running = true;
       randomWander();
       break;
-    case(1): //This is collide state
+    case (1):  //This is collide state
       break;
-    case(2): //This is run away
+    case (2):  //This is run away
       runAway();
       break;
-    case(3):
+    case (3):
+      follow();
       break;
-
   }
 }
 
-void smartFollow(){
-  
+void smartFollow() {
 }
 
 /*
   Ensures: Used in setup to begin the RPC communication and show that the seperate Cores are booted with visual cues.
 */
 void blink(int led, int delaySeconds) {
-  for (int i = 0; i < 10; i++) { // FIXED: Initialize i to 0
+  for (int i = 0; i < 10; i++) {  // FIXED: Initialize i to 0
     digitalWrite(led, LOW);
     delay(delaySeconds);
     digitalWrite(led, HIGH);
@@ -555,55 +588,86 @@ void blink(int led, int delaySeconds) {
 }
 
 
-void collide(){
+void collide() {
   digitalWrite(redLED, 1);
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
   Serial.println("Too Close");
-  running = false; //allows to break out of any loops
-  currentState = 1; //Changes the current state to 1 (angry kid)
+  running = false;   //allows to break out of any loops
+  currentState = 1;  //Changes the current state to 1 (angry kid)
 
-  delay(500); //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
+  delay(500);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
   currentState = 0;
-  running = true; //not sure if we want to keep this here might have to pass to something else, change state?
+  running = true;  //not sure if we want to keep this here might have to pass to something else, change state?
 }
 
 /*
-  Ensures: Returns the X component of the vector that points the opposite direction of obstacles
+  Ensures: Returns the X component of the vector that points the direction of obstacles
 */
-int x_vector(){
-  int frontDist = dist.front;
+int x_vector() {
+  int frontLid = dist.front;
   int backDist = dist.back;
-  if (frontDist > 30) {
-    frontDist = 30;
-  } else if (backDist > 30) {
+  //int rightSnr = dist.sonarRight;
+  //int leftSnr = dist.sonarLeft ;
+  
+  if (frontLid > 30 || frontLid == 0) {
+    frontLid = 30;
+  } 
+  if (backDist > 30 || backDist == 0) {
     backDist = 30;
   }
-  int netDist = frontDist - backDist;
-  if (netDist > 0){
-    netDist -= 30;
-  } else if (netDist < 0){
-    netDist += 30;
-  }
-  return -netDist;
+  Serial.println(String("front: ") + frontLid + String(", back: ") + backDist);
+  // } else if (rightSnr > 30 || rightSnr == 0) {
+  //     rightSnr = 30;
+  // } else if (leftSnr > 30 || leftSnr == 0) {
+  //   leftSnr = 30;
+  // }
+  // float frontAvg = (frontLid + (rightSnr * sqrt(2) / 2) + (leftSnr * sqrt(2) / 2)) / 3;
+  // int netDist = (int)(frontAvg - backDist);
+  // return netDist;
+  int netDist = frontLid - backDist;
+  return netDist;
+
+  // int netDist = frontDist - backDist;
+  // if (netDist > 0){
+  //   netDist -= 30;
+  // } else if (netDist < 0){
+  //   netDist += 30;
+  // }
+  // return -netDist;
 }
 
 /*
-  Ensures: Returns the Y component of the vector that points the opposite direction of obstacles
+  Ensures: Returns the Y component of the vector that points the direction of obstacles
 */
-int y_vector(){
+int y_vector() {
   int leftDist = dist.left;
   int rightDist = dist.right;
-  if (leftDist > 30){
+  //int rightSnr = dist.sonarRight;
+  //int leftSnr = dist.sonarLeft ;
+  
+  if (leftDist > 30 || leftDist == 0) {
     leftDist = 30;
-  } else if (rightDist > 30){
+  } 
+  if (rightDist > 30 || rightDist == 0) {
     rightDist = 30;
+  // } else if (rightSnr > 30 || rightSnr == 0) {
+  //     rightSnr = 30;
+  // } else if (leftSnr > 30 || leftSnr == 0) {
+  //   leftSnr = 30;
   }
-  int netDist = leftDist - rightDist;
-  if (netDist > 0){
-    netDist -= 30;
-  } else if (netDist < 0){
-    netDist += 30;
-  }
-  return -netDist;
+  Serial.println(String("left: ") + leftDist + String(", right: ") + rightDist);
+  // float leftAvg = ((leftSnr * sqrt(2) / 2) + leftDist)/2;
+  // float rightAvg = ((rightSnr * sqrt(2) / 2) + rightDist)/2;
+  // int netDist = (int)(leftAvg - rightAvg);
+  int netDist = (leftDist - rightDist);
+  return netDist;
+
+  // int netDist = leftDist - rightDist;
+  // if (netDist > 0){
+  //   netDist -= 30;
+  // } else if (netDist < 0){
+  //   netDist += 30;
+  // }
+  //return netDist;
 }
