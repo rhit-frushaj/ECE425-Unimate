@@ -11,7 +11,7 @@
 #define leftSnrTrig 2
 #define rightSnrEcho 8
 #define rightSnrTrig 9
-#define numSamples 5
+#define numSamples 3
 
 //LED connections
 #define ylwLED 7
@@ -53,7 +53,7 @@ void loop() {
   int tempRightSonar = 0;
   int tempLeftSonar = 0;
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < numSamples; i++) {
     tempRightLidar += read_lidar(rightLdr);
     tempLeftLidar += read_lidar(leftLdr);
     tempFrontLidar += read_lidar(frontLdr);
@@ -63,12 +63,12 @@ void loop() {
   }
 
 
-  dist.front = tempFrontLidar/3;
-  dist.back = tempBackLidar/3;
-  dist.left = tempLeftLidar/3;
-  dist.right = tempRightLidar/3;
-  dist.sonarLeft = tempLeftSonar/3;
-  dist.sonarRight = tempRightSonar/3;
+  dist.front = tempFrontLidar/numSamples;
+  dist.back = tempBackLidar/numSamples;
+  dist.left = tempLeftLidar/numSamples;
+  dist.right = tempRightLidar/numSamples;
+  dist.sonarLeft = tempLeftSonar/numSamples;
+  dist.sonarRight = tempRightSonar/numSamples;
 
   // if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){ //this is smart but I don't think it can stay, this would be active for all states not just when it's colide
   //   RPC.call("collide");
@@ -78,13 +78,13 @@ void loop() {
 }
 
 void blink(int led, int delaySeconds) {
-  pinMode(led, OUTPUT);
-  for (int i = 0; i < 10; i++) {
-    digitalWrite(led, LOW);
-    delay(delaySeconds);
-    digitalWrite(led, HIGH);
-    delay(delaySeconds);
-  }
+  // pinMode(led, OUTPUT);
+  // for (int i = 0; i < 10; i++) {
+  //   digitalWrite(led, LOW);
+  //   delay(delaySeconds);
+  //   digitalWrite(led, HIGH);
+  //   delay(delaySeconds);
+  // }
   RPC.begin();
   digitalWrite(led, LOW);
 }
