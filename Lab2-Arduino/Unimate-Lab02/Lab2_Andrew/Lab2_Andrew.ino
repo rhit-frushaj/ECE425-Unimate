@@ -45,6 +45,8 @@ MultiStepper steppers;                                                 //create 
 #define max_speed 1636       //maximum stepper motor speed
 #define max_accel 10000      //maximum motor acceleration
 
+#define tooClose 5 // collide distance in [cm]
+
 int pauseTime = 2500;  //time before robot moves
 int stepTime = 500;    //delay time between high and low on step pin
 int wait_time = 1000;  //delay for printing data
@@ -83,7 +85,7 @@ void setup() {
   } else {
     blink(redLED, 100);
   }
-  RPC.bind("collide", collide);
+  //RPC.bind("collide", collide);
   // RPC.bind("runAway", runAway);
 
   delay(500);
@@ -95,9 +97,11 @@ void loop() {
   dist = RPC.call("lidarRead").as<lidar>();
   running = true;
   // delay(50); //delay on sensor reading, can be changed if needbe
-  // smartWander();
-  // smartFollow();
-  follow();
+  Serial.println(currentState);
+  //smartWander();
+  
+  smartFollow();
+  //follow();
   // Serial.println(
   //   String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
 }
@@ -429,9 +433,9 @@ void randomWander() {
 
   // int movementStep = random(0, 501);  // sets random pulse for the forward and turn behaviors to use.
   // //sets lights to green only on
-  // digitalWrite(grnLED, HIGH);
-  // digitalWrite(redLED, LOW);
-  // digitalWrite(ylwLED, LOW);
+  digitalWrite(grnLED, HIGH);
+  digitalWrite(redLED, LOW);
+  digitalWrite(ylwLED, LOW);
   // long randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
   // if (randomBehavior == 0) {
   //   forward(movementStep);
@@ -457,7 +461,7 @@ void randomWander() {
     double randomAngel = 1.0 * random(0, 361);
     goToAngle(randomAngel);
   } else {
-    forward(50);
+    forward(25);
   }
 }
 
@@ -525,8 +529,7 @@ void follow() {  //curious kid
   //   forward(10);
   //   return;
   // }
-
-  if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
+  while ((dist.front > tooClose) || (dist.back > tooClose) || (dist.left > tooClose) || (dist.right > tooClose)) {  //this if statement keeps it still if there is no reading
 
     float x_result = 1.0 * x_vector();
     float y_result = 1.0 * y_vector();
@@ -544,6 +547,7 @@ void follow() {  //curious kid
     }
     goToAngle(theta);
     forward(10);
+    dist = RPC.call("lidarRead").as<lidar>();
   }
 }
 
@@ -552,13 +556,15 @@ void follow() {  //curious kid
 
 */
 void smartWander() {  //
-
   //logic for controlling in and out of the randomWander to runAway states
-  if (currentState != 2 && (dist.left != 0 || dist.right != 0 || dist.front != 0 || dist.back != 0)) {
+  if (currentState != 2 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) {
     currentState = 2;
+  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    currentState = 1;
   } else {
     currentState = 0;
   }
+
 
   //Switch case to call the correct method based on the current state variable value
   switch (currentState) {
@@ -566,7 +572,8 @@ void smartWander() {  //
       running = true;
       randomWander();
       break;
-    case (1):  //This is collide state
+    case (1):
+      collide();
       break;
     case (2):  //This is run away
       running = true;
@@ -580,7 +587,13 @@ void smartWander() {  //
 
 */
 void smartFollow() {  //
-
+  if (currentState != 3 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) {
+    currentState = 3;
+  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    currentState = 1;
+  } else {
+    currentState = 0;
+  }
     //Switch case to call the correct method based on the current state variable value
   switch (currentState) {
     case (0):  //This is the random wander state
@@ -588,8 +601,9 @@ void smartFollow() {  //
       randomWander();
       break;
     case (1):  //This is collide state
+    collide();
       break;
-    case (3):  //This is run away
+    case (3):  //This is follow
       running = true;
       follow();
       break;
@@ -618,7 +632,12 @@ void collide() {
   Serial.println("Too Close");
   running = false;   //allows to break out of any loops
   currentState = 1;  //Changes the current state to 1 (angry kid)
-
+  while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){ 
+  delay(50);
+  dist = RPC.call("lidarRead").as<lidar>();
+  }
+  running = true;
+  currentState=0;
   delay(500);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
 }
 
