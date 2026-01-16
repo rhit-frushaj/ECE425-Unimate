@@ -72,6 +72,8 @@ void loop() {
 
   // if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){ //this is smart but I don't think it can stay, this would be active for all states not just when it's colide
   //   RPC.call("collide");
+  // } else if( dist.front != 0 || dist.left != 0 || dist.back != 0 || dist.right != 0){
+  //   RPC.call("runAway");
   // }
 
   delay(10);  // Small delay to prevent overwhelming the sensors
