@@ -96,12 +96,9 @@ void loop() {
   // Read lidar data from M4
   dist = RPC.call("lidarRead").as<lidar>();
   running = true;
-  // delay(50); //delay on sensor reading, can be changed if needbe
   Serial.println(currentState);
   //smartWander();
-  
   smartFollow();
-  //follow();
   // Serial.println(
   //   String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
 }
@@ -426,47 +423,26 @@ void goToGoalIn(float xg, float yg) {  // in
 }
 
 /*
-  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, random spins, and random forward and backwards
+  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, and random forwards
 
 */
 void randomWander() {
-
-  // int movementStep = random(0, 501);  // sets random pulse for the forward and turn behaviors to use.
-  // //sets lights to green only on
+  //sets lights to green only on
   digitalWrite(grnLED, HIGH);
   digitalWrite(redLED, LOW);
   digitalWrite(ylwLED, LOW);
-  // long randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
-  // if (randomBehavior == 0) {
-  //   forward(movementStep);
-  // } else if (randomBehavior == 1) {
-  //   int dir = random(0, 2);
-  //   turn(dir, movementStep);
-  // } else {
-  //   int randX = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-  //   int directionXModifier = random(0, 2);
-  //   if (directionXModifier == 1) {
-  //     randX *= -1;
-  //   }
-  //   int randY = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-  //   int directionYModifier = random(0, 2);
-  //   if (directionYModifier == 1) {
-  //     randY *= -1;
-  //   }
-  //   goToGoalCm(randX, randY);
-  // }
-
+  
   int randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
   if (randomBehavior <= 1) {
-    double randomAngel = 1.0 * random(0, 361);
-    goToAngle(randomAngel);
+    double randomAngle = 1.0 * random(0, 361); // chooses random angle to go to from 0-360 deg
+    goToAngle(randomAngle);                    // goes to random angle
   } else {
-    forward(25);
+    forward(25); 
   }
 }
 
 /*
-  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects
+  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects. Uses lidar and calculated vector to turn an angle and move away.
 
   Output: Robot motion based on external stimuli. 
 */
@@ -474,8 +450,6 @@ void runAway() {
   digitalWrite(redLED, 0);
   digitalWrite(ylwLED, 1);
   digitalWrite(grnLED, 0);
-  // Serial.println(
-  //   String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
 
   if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
     forward(10);
@@ -489,8 +463,8 @@ void runAway() {
   }
 
   if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
-
-    float x_result = -1.0 * x_vector();
+    // multiplies direction vector by -1 to ensure it is repelled
+    float x_result = -1.0 * x_vector(); 
     float y_result = -1.0 * y_vector();
 
     float theta = atan2(y_result, x_result) * (180 / PI);
@@ -519,18 +493,8 @@ void follow() {  //curious kid
   Serial.println(
     String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
 
-  // if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
-  //   forward(10);
-  //   return;
-  // }
-
-  // if (dist.front != 0 && dist.back != 0 && dist.left == 0 && dist.right == 0) {  //special case for when two wall front and back only
-  //   goToAngle(90);
-  //   forward(10);
-  //   return;
-  // }
-  while ((dist.front > tooClose) || (dist.back > tooClose) || (dist.left > tooClose) || (dist.right > tooClose)) {  //this if statement keeps it still if there is no reading
-
+  while ((dist.front > tooClose) || (dist.back > tooClose) || (dist.left > tooClose) || (dist.right > tooClose)) {  //this if statement keeps it still if there is no reading. While loop ensures that if robot is following that it can keep following before it goes into randomWander.
+   // keeps direction vector positive to follow obstacle
     float x_result = 1.0 * x_vector();
     float y_result = 1.0 * y_vector();
 
@@ -547,7 +511,7 @@ void follow() {  //curious kid
     }
     goToAngle(theta);
     forward(10);
-    dist = RPC.call("lidarRead").as<lidar>();
+    dist = RPC.call("lidarRead").as<lidar>();   // updates lidar to ensure robot is not stuck in while loop
   }
 }
 
@@ -557,12 +521,12 @@ void follow() {  //curious kid
 */
 void smartWander() {  //
   //logic for controlling in and out of the randomWander to runAway states
-  if (currentState != 2 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) {
+  if (currentState != 2 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) { // if any lidar is not too close but still detects something, it goes into runAway (state 2)
     currentState = 2;
-  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
-    currentState = 1;
+  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) { //sets to collide if too close
+    currentState = 1; // collide
   } else {
-    currentState = 0;
+    currentState = 0; // randomWander
   }
 
 
