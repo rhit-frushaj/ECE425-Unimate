@@ -29,8 +29,8 @@
 #define ylwLED 7
 #define redLED 5
 
-// Data structure for lidar
-struct lidar {
+// Data structure for sensor readings
+struct sensors {
   int front;
   int back;
   int left;
@@ -45,14 +45,14 @@ struct lidar {
 void setup() {
   Serial.begin(115200);
 
-  if (RPC.cpu_id() == CM7_CPUID) { //Sets up RPC for multicore
+  if (RPC.cpu_id() == CM7_CPUID) {  //Sets up RPC for multicore
     blink(ylwLED, 100);
   } else {
     blink(redLED, 100);
   }
 
-  init_sensors(); //initialize all sensors
-  RPC.bind("lidarRead", lidarRead); //Bind the lidarRead method to be callable from M7
+  init_sensors();                    //initialize all sensors
+  RPC.bind("lidarRead", lidarRead);  //Bind the lidarRead method to be callable from M7
 }
 
 void loop() {
@@ -74,12 +74,12 @@ void loop() {
     tempLeftSonar += read_sonar(leftSnrTrig, leftSnrEcho);
   }
 
-  dist.front = tempFrontLidar/numSamples;
-  dist.back = tempBackLidar/numSamples;
-  dist.left = tempLeftLidar/numSamples;
-  dist.right = tempRightLidar/numSamples;
-  dist.sonarLeft = tempLeftSonar/numSamples;
-  dist.sonarRight = tempRightSonar/numSamples;
+  dist.front = tempFrontLidar / numSamples;
+  dist.back = tempBackLidar / numSamples;
+  dist.left = tempLeftLidar / numSamples;
+  dist.right = tempRightLidar / numSamples;
+  dist.sonarLeft = tempLeftSonar / numSamples;
+  dist.sonarRight = tempRightSonar / numSamples;
 
   //IGNORE - This code left for example later
 
@@ -111,7 +111,7 @@ void blink(int led, int delaySeconds) {
 /*
   Ensures: This is a getter method. Returns the sensor data when called. Callable from M7.
 */
-lidar lidarRead() {
+sensors lidarRead() {
   return dist;
 }
 
@@ -148,15 +148,15 @@ void init_sensors() {
   Return: Int sonar distance reading [cm]
 */
 int read_sonar(int trig, int echo) {
-    uint16_t distance, pulseWidthUs;
+  uint16_t distance, pulseWidthUs;
   // pinMode(trig, OUTPUT);
   digitalWrite(trig, LOW);
-  digitalWrite(trig, HIGH);            //Set the trig pin High
-  delayMicroseconds(10);              //Delay of 10 microseconds
-  digitalWrite(trig, LOW);             //Set the trig pin Low
+  digitalWrite(trig, HIGH);  //Set the trig pin High
+  delayMicroseconds(10);     //Delay of 10 microseconds
+  digitalWrite(trig, LOW);   //Set the trig pin Low
   // pinMode(echo, INPUT);                //Set the pin to input mode
   pulseWidthUs = pulseIn(echo, HIGH);  //Detect the high level time on the echo pin, the output high level time represents the ultrasonic flight time (unit: us)
-    distance = pulseWidthUs / 58;
+  distance = pulseWidthUs / 58;
   if (distance < 0 || distance > 30) { distance = 0; }
   return distance;
 }

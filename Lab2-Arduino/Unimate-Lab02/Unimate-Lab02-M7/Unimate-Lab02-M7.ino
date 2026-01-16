@@ -1,6 +1,6 @@
 /************************************
-   Unimate-Lab02.ino
-   Andrew Frush, Val Rumzis, 1.9.25
+   Unimate-Lab02-M7.ino
+   Andrew Frush, Val Rumzis, 1.16.25
    ***********************************
    The following program is an implimentation of two basic mobile robot behavior models. The first introduces a fleeing mechanical (potential fields) and the other a 
    follow mechanic when with an object in front of the robot. Both have a collide mechanic stopping the robot when an object appears too close in front of the robot. 
@@ -8,14 +8,14 @@
    The primary functions created are:
    randomWander(): The robot randomly moves forward, backward, spins, and turns turns at random amounts. Motor speed varies slightly.  
    collide(): Stops the robot when a random object appears in front of the robot. Based on a static "too close" distance parameter.
-   runAway(): Impliments potential fields to repulse the robot away from walls and go in free directions. Utilizes goToGoal and goToAngel + lidar sensors.
-   follow():
-   smartWander():
-   smartFollow:
+   runAway(): Impliments potential fields to repulse the robot away from walls and go in free directions. Utilizes goToAngel + lidar sensors.
+   follow(): Impliments a potential field(ish) follow program. If an object is detected if on any side the robot follows until the object is lost.
+   smartWander(): Logic to switch between states, Changes between Collide, Random Wander, and Run Away.
+   smartFollow: Logic to switch between states, Changes between Collide, Random Wander, and Follow.
 
 ************************************/
 
-//includew all necessary libraries
+//include all necessary libraries
 #include <Arduino.h>
 #include <RPC.h>
 #include <AccelStepper.h>  //include the stepper motor library
@@ -45,6 +45,8 @@ MultiStepper steppers;                                                 //create 
 #define max_speed 1636       //maximum stepper motor speed
 #define max_accel 10000      //maximum motor acceleration
 
+#define tooClose 5  // collide distance in [cm]
+
 int pauseTime = 2500;  //time before robot moves
 int stepTime = 500;    //delay time between high and low on step pin
 int wait_time = 1000;  //delay for printing data
@@ -60,7 +62,7 @@ uint8_t currentState = 3;  //Tracks the state robot is currently in
 bool running = true;  // global variable to keep whether the robot should be running or not, controls blocking
 // // Data to keep the lidar sensor data - taken from example code
 
-struct lidar {
+struct sensors {
   int front;
   int back;
   int left;
@@ -76,14 +78,13 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  init_stepper();
+  init_stepper();  //Initialize all motor control
 
-  if (RPC.cpu_id() == CM7_CPUID) {
+  if (RPC.cpu_id() == CM7_CPUID) {  //Sets up RPC for multicore
     blink(ylwLED, 100);
   } else {
     blink(redLED, 100);
   }
-  RPC.bind("collide", collide);
 
   delay(500);
 }
@@ -91,10 +92,11 @@ void setup() {
 void loop() {
 
   // Read lidar data from M4
-  dist = RPC.call("lidarRead").as<lidar>();
-  // Serial.println(dist.front);
-  delay(50);  //delay on sensor reading, can be changed if needbe
-  smartWander();
+  dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
+  running = true;
+  Serial.println(currentState);
+  //smartWander();
+  smartFollow();
 }
 
 
@@ -346,328 +348,212 @@ void goToAngle(float thetag) {  // degrees
 }
 
 /*
-  Ensures: Moves the robot to a position based on it's current position in centimeters. First rotates the robot then moves in a straight line directly to the goal. 
-           The coordinate system of the robot can be visualized below:
-
-                ^ X
-                |
-                |
-                |
-      <---------|        
-      Y
-    
-  float xg: X coordinate of the desired ending location in centimeters.
-  float yg: Y coordinate of the desired ending location in centimeters.
-*/
-void goToGoalCm(float xg, float yg) {  // cm
-  // Serial.println("Going to goal");
-  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
-  digitalWrite(ltDirPin, HIGH);
-  float xc = 0;  //variable for tracking current position
-  float yc = 0;
-  float dc = 0;
-  float thetag = atan(yg / xg);                     //calculate desired angle
-  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag + PI;
-  } else if (xg > 0 && yg < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2 * PI;
-  } else if (xg == 0 && yg < 0) {  //special case for 90 degree right turn
-    thetag = 3 * PI / 2;
-  }
-  goToAngle(thetag * (180 / PI));                                  //rotate robot to proper angle in degrees
-  float dg = sqrt((xc - xg) * (xc - xg) + (yc - yg) * (yc - yg));  //calcule distance in cm for robot to travel
-
-  digitalWrite(rtDirPin, HIGH);  //set both motors back to drive forward after rotation occured
-  digitalWrite(ltDirPin, HIGH);
-
-  delay(100);
-  while (dg >= dc) {  //main loop advancing robot until it's current position equales or exceedes the target distance
-    if (!running) {
-      break;
-    }
-    digitalWrite(rtStepPin, HIGH);
-    digitalWrite(ltStepPin, HIGH);
-    delayMicroseconds(stepTime);
-    digitalWrite(rtStepPin, LOW);
-    digitalWrite(ltStepPin, LOW);
-    delayMicroseconds(stepTime);
-    dc += (8.5 * PI) / 800;   // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
-    delayMicroseconds(1000);  //artificially added delay to slow down speed further
-  }
-}
-
-/*
-  Ensures: Moves the robot to a position based on it's current position in inches. First rotates the robot then moves in a straight line directly to the goal. 
-           The coordinate system of the robot can be visualized below:
-
-                ^ X
-                |
-                |
-                |
-      <---------|        
-      Y
-    
-  float xg: X coordinate of the desired ending location in inches.
-  float yg: Y coordinate of the desired ending location in inches.
-*/
-void goToGoalIn(float xg, float yg) {  // in
-  float xgcm = xg * 2.54;              //conversion to cm
-  float ygcm = yg * 2.54;
-  goToGoalCm(xgcm, ygcm);
-}
-
-/*
-  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, random spins, and random forward and backwards
-
+  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, and random forwards
 */
 void randomWander() {
-
-  int movementStep = random(0, 501);  // sets random pulse for the forward and turn behaviors to use.
   //sets lights to green only on
   digitalWrite(grnLED, HIGH);
   digitalWrite(redLED, LOW);
   digitalWrite(ylwLED, LOW);
-  long randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
-  if (randomBehavior == 0) {
-    forward(movementStep);
-  } else if (randomBehavior == 1) {
-    int dir = random(0, 2);
-    turn(dir, movementStep);
+
+  int randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
+  if (randomBehavior <= 1) {
+    double randomAngle = 1.0 * random(0, 361);  // chooses random angle to go to from 0-360 deg
+    goToAngle(randomAngle);                     // goes to random angle
   } else {
-    int randX = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-    int directionXModifier = random(0, 2);
-    if (directionXModifier == 1) {
-      randX *= -1;
-    }
-    int randY = random(0, 31);  // sets a random x distance in cm to 0 to 30 cm (approx 1 ft)
-    int directionYModifier = random(0, 2);
-    if (directionYModifier == 1) {
-      randY *= -1;
-    }
-    goToGoalCm(randX, randY);
+    forward(25);
   }
 }
 
+/*
+  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects. Uses lidar and calculated vector to turn an angle and move away.
 
-// void runAway(){ //shy kid
-//   //this is where we impliment potential fields. I think that we will probably only make a move if the length of the vector is above a certain threshold.
-//   //I can imagine if it's put in a box that it will just bounce around and jitter.
-//   //To stop jittering we should make it only move if the move it can make is above a certain threshold.
-// }
-
+  Output: Robot motion based on external stimuli. 
+*/
 void runAway() {
   digitalWrite(redLED, 0);
   digitalWrite(ylwLED, 1);
   digitalWrite(grnLED, 0);
-  Serial.println(
-    String("Sensor Values (Front, Back, Left, Right, Left Sonar, Right Sonar): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right + ", " + dist.sonarLeft + ", " + dist.sonarRight);
 
-  for (int i = 0; i < 50; i++) {
-    dist = RPC.call("lidarRead").as<lidar>();
-    delay(10);
-  }
-  int xc = -1 * x_vector();  // -1 for "avoid" behavior
-  int yc = -1 * y_vector();  // -1 for "avoid" behavior
-  Serial.println(String("Direction Vector: ") + xc + String(", ") + yc);
-
-  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
-  digitalWrite(ltDirPin, HIGH);
-  float thetag = atan(yc / xc);                     //calculate desired angle
-  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag + PI;
-  } else if (xc > 0 && yc < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2 * PI;
-  } else if (xc == 0 && yc < 0) {  //special case for 90 degree right turn
-    thetag = 3 * PI / 2;
+  if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
+    forward(10);
+    return;
   }
 
-  if (abs(xc) < 10 && abs(yc) < 10) {                                                                                                                    //edge case logic for small deltas
-    if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30 && dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // checks if completeley obstructed on y and x and does not move
-      Serial.println("Completely Surrounded");
-      return;
-    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) {  // sides obstructed but front back unobstructed
-      thetag = 0;
-      Serial.println("Sides obstructed but front & back unobstructed");
-      forward(25);
-      return;
-    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // all obstructed but left and right
-      thetag = PI / 2;
-      Serial.println("all obstructed but sides");
-    } else {  // unobstructed on every side
-      Serial.println("unobstructed on every side");
-      return;
+  if (dist.front != 0 && dist.back != 0 && dist.left == 0 && dist.right == 0) {  //special case for when two wall front and back only
+    goToAngle(90);
+    forward(10);
+    return;
+  }
+
+  if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
+    // multiplies direction vector by -1 to ensure it is repelled
+    float x_result = -1.0 * x_vector();
+    float y_result = -1.0 * y_vector();
+
+    float theta = atan2(y_result, x_result) * (180 / PI);
+    if (theta < 0) {
+      theta = 360 + theta;  //this converts the angle back to 0 -> 360
     }
+    Serial.println(theta);
+
+    float magnitude = sqrt(x_result * x_result + y_result * y_result);
+    if (magnitude < 3.0) {  // threshold
+      return;               // forces too weak, don't move
+    }
+    goToAngle(theta);
+    forward(10);
   }
-
-  Serial.println(
-    String("Attempted Angle (deg)") + thetag * (180 / PI));
-  goToAngle(thetag * (180 / PI));  //rotate robot to proper angle in degrees
-
-  forward(25);
 }
 
+
+/*
+  Ensures: This method is the follow protocol for the robot.
+*/
 void follow() {  //curious kid
   digitalWrite(redLED, 0);
   digitalWrite(ylwLED, 1);
   digitalWrite(grnLED, 0);
-  // Serial.println(
-  //   String("Sensor Values (Front, Back, Left, Right, Left Sonar, Right Sonar): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right + ", " + dist.sonarLeft + ", " + dist.sonarRight);
-
-  for (int i = 0; i < 50; i++) {
-    dist = RPC.call("lidarRead").as<lidar>();
-    delay(10);
-  }
-  int xc = x_vector();
-  int yc = y_vector();
-  Serial.println(String("Direction Vector: ") + xc + String(", ") + yc);
-
-  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
-  digitalWrite(ltDirPin, HIGH);
-  float thetag = atan(yc / xc);                     //calculate desired angle
-  if ((xc < 0 && yc < 0) || (xc < 0 && yc >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag + PI;
-  } else if (xc > 0 && yc < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2 * PI;
-  } else if (xc == 0 && yc < 0) {  //special case for 90 degree right turn
-    thetag = 3 * PI / 2;
-  }
-  if (abs(xc) < 6 && abs(yc) < 6) {                                            //edge case logic for small deltas
-    if (dist.left > 0 && dist.right > 0 && dist.back > 0 && dist.front > 0) {  // checks if completeley obstructed on y and x and does not move
-      Serial.println("Completely Surrounded");
-      return;
-    } else if (dist.left > 0 && dist.left < 30 && dist.right > 0 && dist.right < 30) {  // sides obstructed but front back unobstructed
-      thetag = 0;
-      Serial.println("Sides obstructed but front & back unobstructed");
-    } else if (dist.back > 0 && dist.back < 30 && dist.front > 0 && dist.front < 30) {  // all obstructed but left and right
-      thetag = PI / 2;
-      Serial.println("all obstructed but sides");
-    } else {  // unobstructed on every side
-      Serial.println("unobstructed on every side");
-      return;
-    }
-  }
   Serial.println(
-    String("Attempted Angle (deg)") + thetag * (180 / PI));
-  goToAngle(thetag * (180 / PI));  //rotate robot to proper angle in degrees
+    String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
 
-  forward(25);
+  while ((dist.front > tooClose) || (dist.back > tooClose) || (dist.left > tooClose) || (dist.right > tooClose)) {  //this if statement keeps it still if there is no reading. While loop ensures that if robot is following that it can keep following before it goes into randomWander.
+                                                                                                                    // keeps direction vector positive to follow obstacle
+    float x_result = 1.0 * x_vector();
+    float y_result = 1.0 * y_vector();
+
+    float theta = atan2(y_result, x_result) * (180 / PI);
+    if (theta < 0) {
+      theta = 360 + theta;  //this converts the angle back to 0 -> 360
+    }
+    Serial.print("Following: ");
+    Serial.println(theta);
+
+    float magnitude = sqrt(x_result * x_result + y_result * y_result);
+    if (magnitude > 15.0) {  // threshold
+      return;                // forces too weak, don't move
+    }
+    goToAngle(theta);
+    forward(10);
+    dist = RPC.call("lidarRead").as<sensors>();  // updates lidar to ensure robot is not stuck in while loop
+  }
 }
 
+/*
+  Ensures: Implementation of the smart wander routine as per project guidelines. Method contains the main switching logic 
+
+*/
 void smartWander() {  //
+  //logic for controlling in and out of the randomWander to runAway states
+  if (currentState != 2 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) {  // if any lidar is not too close but still detects something, it goes into runAway (state 2)
+    currentState = 2;
+  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {  //sets to collide if too close
+    currentState = 1;                                                                                                                                                                                 // collide
+  } else {
+    currentState = 0;  // randomWander
+  }
+
+
+  //Switch case to call the correct method based on the current state variable value
+  switch (currentState) {
+    case (0):  //This is the random wander state
+      running = true;
+      randomWander();
+      break;
+    case (1):
+      collide();
+      break;
+    case (2):  //This is run away
+      running = true;
+      runAway();
+      break;
+  }
+}
+
+/*
+  Ensures: Implementation of the smart follow routine as per project guidelines. Method contains the main switching logic 
+*/
+void smartFollow() { 
+  // logic for state control variable
+  if (currentState != 3 && (dist.left > tooClose || dist.right > tooClose || dist.front > tooClose || dist.back > tooClose)) {
+    currentState = 3;
+  } else if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    currentState = 1;
+  } else {
+    currentState = 0;
+  }
+
+  //Switch case to call the correct method based on the current state variable value
   switch (currentState) {
     case (0):  //This is the random wander state
       running = true;
       randomWander();
       break;
     case (1):  //This is collide state
+      collide();
       break;
-    case (2):  //This is run away
-      runAway();
-      break;
-    case (3):
+    case (3):  //This is follow
+      running = true;
       follow();
       break;
   }
-}
-
-void smartFollow() {
 }
 
 /*
   Ensures: Used in setup to begin the RPC communication and show that the seperate Cores are booted with visual cues.
 */
 void blink(int led, int delaySeconds) {
-  for (int i = 0; i < 10; i++) {  // FIXED: Initialize i to 0
-    digitalWrite(led, LOW);
-    delay(delaySeconds);
-    digitalWrite(led, HIGH);
-    delay(delaySeconds);
-  }
+  // for (int i = 0; i < 10; i++) {  // FIXED: Initialize i to 0
+  //   digitalWrite(led, LOW);
+  //   delay(delaySeconds);
+  //   digitalWrite(led, HIGH);
+  //   delay(delaySeconds);
+  // }
   RPC.begin();
   digitalWrite(led, LOW);
 }
 
-
+/*
+  Ensures: Method for the collide behavior. Simply Stalls out the robot until sensor reading changes
+*/
 void collide() {
+  //red light on
   digitalWrite(redLED, 1);
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
+  
   Serial.println("Too Close");
   running = false;   //allows to break out of any loops
   currentState = 1;  //Changes the current state to 1 (angry kid)
 
+  //While logic that stays in loop untill the obstruction is gone
+  while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    delay(50); //delay for which the robot checks if the obstructon is gone
+    dist = RPC.call("lidarRead").as<sensors>(); //Reading chnaging values from the M4 core 
+  }
+  running = true;
+  currentState = 0; //Set back to random wander
   delay(500);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
-  currentState = 0;
-  running = true;  //not sure if we want to keep this here might have to pass to something else, change state?
 }
 
 /*
-  Ensures: Returns the X component of the vector that points the direction of obstacles
-*/
-int x_vector() {
-  int frontLid = dist.front;
-  int backDist = dist.back;
-  //int rightSnr = dist.sonarRight;
-  //int leftSnr = dist.sonarLeft ;
-  
-  if (frontLid > 30 || frontLid == 0) {
-    frontLid = 30;
-  } 
-  if (backDist > 30 || backDist == 0) {
-    backDist = 30;
-  }
-  Serial.println(String("front: ") + frontLid + String(", back: ") + backDist);
-  // } else if (rightSnr > 30 || rightSnr == 0) {
-  //     rightSnr = 30;
-  // } else if (leftSnr > 30 || leftSnr == 0) {
-  //   leftSnr = 30;
-  // }
-  // float frontAvg = (frontLid + (rightSnr * sqrt(2) / 2) + (leftSnr * sqrt(2) / 2)) / 3;
-  // int netDist = (int)(frontAvg - backDist);
-  // return netDist;
-  int netDist = frontLid - backDist;
-  return netDist;
+  Ensures: Returns the X component of the vector that points twoards the object it sees
 
-  // int netDist = frontDist - backDist;
-  // if (netDist > 0){
-  //   netDist -= 30;
-  // } else if (netDist < 0){
-  //   netDist += 30;
-  // }
-  // return -netDist;
+  Returns: Float representing the force 
+*/
+float x_vector() {
+  float kp = 100; //scaler gain
+  float front_force = (dist.front > 0) ? (1.0 / dist.front) : 0.0;  //stops dividing by 0 which would be an error
+  float back_force = (dist.back > 0) ? (1.0 / dist.back) : 0.0;
+  return kp * (front_force - back_force);
 }
 
 /*
-  Ensures: Returns the Y component of the vector that points the direction of obstacles
+  Ensures: Returns the Y component of the vector that points twoards the object it sees
 */
-int y_vector() {
-  int leftDist = dist.left;
-  int rightDist = dist.right;
-  //int rightSnr = dist.sonarRight;
-  //int leftSnr = dist.sonarLeft ;
-  
-  if (leftDist > 30 || leftDist == 0) {
-    leftDist = 30;
-  } 
-  if (rightDist > 30 || rightDist == 0) {
-    rightDist = 30;
-  // } else if (rightSnr > 30 || rightSnr == 0) {
-  //     rightSnr = 30;
-  // } else if (leftSnr > 30 || leftSnr == 0) {
-  //   leftSnr = 30;
-  }
-  Serial.println(String("left: ") + leftDist + String(", right: ") + rightDist);
-  // float leftAvg = ((leftSnr * sqrt(2) / 2) + leftDist)/2;
-  // float rightAvg = ((rightSnr * sqrt(2) / 2) + rightDist)/2;
-  // int netDist = (int)(leftAvg - rightAvg);
-  int netDist = (leftDist - rightDist);
-  return netDist;
-
-  // int netDist = leftDist - rightDist;
-  // if (netDist > 0){
-  //   netDist -= 30;
-  // } else if (netDist < 0){
-  //   netDist += 30;
-  // }
-  //return netDist;
+float y_vector() {
+  float kp = 100;//scaler gain
+  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0; //stops dividing by 0 which would be an error
+  float right_force = (dist.right > 0) ? (1.0 / dist.right) : 0.0;
+  return kp * (left_force - right_force);
 }
