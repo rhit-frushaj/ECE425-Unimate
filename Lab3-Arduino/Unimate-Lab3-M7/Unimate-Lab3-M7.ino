@@ -53,7 +53,7 @@ struct sensors {
   int left;
   int right;
   MSGPACK_DEFINE_ARRAY(front, back, left, right);
-  } dist{};
+} dist{};
 
 void setup() {
   Serial.begin(115200);
@@ -64,7 +64,7 @@ void setup() {
   } else {
     blink(redLED, 100);
   }
-  RPC.bind("collide", collide);      //Binds collide to be called in M7
+  RPC.bind("collide", collide);  //Binds collide to be called in M7
   delay(500);
 }
 
@@ -72,7 +72,9 @@ void loop() {
   // Read lidar data from M4
   dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
   running = true;
-
+  digitalWrite(redLED, 0);
+  digitalWrite(ylwLED, 1);
+  digitalWrite(grnLED, 0);
 }
 
 //function to set all stepper motor variables, outputs and LEDs
@@ -217,7 +219,7 @@ void spin(bool CW) {
   float thetag: Angle goal to turn to, positive only between 0 -> 360 degrees.
 */
 void goToAngle(float thetag) {  // degrees
-  float drift = 1.02;  //added to artificially correct for the overshoot/ compounding error during square
+  float drift = 1.02;           //added to artificially correct for the overshoot/ compounding error during square
   thetag *= drift;
   digitalWrite(rtDirPin, HIGH);  //sets both motors forward
   digitalWrite(ltDirPin, HIGH);
@@ -260,38 +262,37 @@ void goToAngle(float thetag) {  // degrees
   float xg: X coordinate of the desired ending location in centimeters.
   float yg: Y coordinate of the desired ending location in centimeters.
 */
-void goToGoalCm(float xg, float yg){ // cm
+void goToGoalCm(float xg, float yg) {  // cm
   Serial.println("Going to goal");
-  digitalWrite(rtDirPin, HIGH); //sets to drive forward
+  digitalWrite(rtDirPin, HIGH);  //sets to drive forward
   digitalWrite(ltDirPin, HIGH);
-  float xc = 0; //variable for tracking current position
+  float xc = 0;  //variable for tracking current position
   float yc = 0;
-  float dc=0;
-  float thetag = atan(yg/xg); //calculate desired angle
-  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)){ // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
-    thetag = thetag+ PI;
-  } else if (xg >0 && yg < 0 ){ // Corrects angle into the correct 360 degree representation if in the 4th quadrant
-    thetag += 2*PI;
-  } else if (xg == 0 && yg < 0){ //special case for 90 degree right turn
-    thetag = 3*PI/2;
+  float dc = 0;
+  float thetag = atan(yg / xg);                     //calculate desired angle
+  if ((xg < 0 && yg < 0) || (xg < 0 && yg >= 0)) {  // if point lies in 2nd or 3rd quadrant must add 180 degrees to angle
+    thetag = thetag + PI;
+  } else if (xg > 0 && yg < 0) {  // Corrects angle into the correct 360 degree representation if in the 4th quadrant
+    thetag += 2 * PI;
+  } else if (xg == 0 && yg < 0) {  //special case for 90 degree right turn
+    thetag = 3 * PI / 2;
   }
-  goToAngle(thetag*(180/PI)); //rotate robot to proper angle in degrees
-  float dg = sqrt((xc-xg)*(xc-xg)+(yc-yg)*(yc-yg)); //calcule distance in cm for robot to travel
+  goToAngle(thetag * (180 / PI));                                  //rotate robot to proper angle in degrees
+  float dg = sqrt((xc - xg) * (xc - xg) + (yc - yg) * (yc - yg));  //calcule distance in cm for robot to travel
 
-  digitalWrite(rtDirPin, HIGH); //set both motors back to drive forward after rotation occured
+  digitalWrite(rtDirPin, HIGH);  //set both motors back to drive forward after rotation occured
   digitalWrite(ltDirPin, HIGH);
 
   delay(100);
-  while (dg >= dc){ //main loop advancing robot until it's current position equales or exceedes the target distance
+  while (dg >= dc) {  //main loop advancing robot until it's current position equales or exceedes the target distance
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
     delayMicroseconds(stepTime);
     digitalWrite(rtStepPin, LOW);
     digitalWrite(ltStepPin, LOW);
     delayMicroseconds(stepTime);
-    dc += (8.5*PI)/800; // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
-    delayMicroseconds(1000); //artificially added delay to slow down speed further
-
+    dc += (8.5 * PI) / 800;   // every loop is a step of the motor, this line adds the proper amount of distance traveled in one step to the current position in cm
+    delayMicroseconds(1000);  //artificially added delay to slow down speed further
   }
 }
 
@@ -303,14 +304,16 @@ void collide() {
   digitalWrite(redLED, 1);
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
-  
-  running = false;   //allows to break out of any loops
 
-  //While logic that stays in loop until the obstruction is gone
-  while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
-    delay(50); //delay for which the robot checks if the obstructon is gone
-    dist = RPC.call("lidarRead").as<sensors>(); //Reading chnaging values from the M4 core 
-  }
+  running = false;  //allows to break out of any loops
+
+
+
+  // //While logic that stays in loop until the obstruction is gone
+  // while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+  //   delay(50);                                   //delay for which the robot checks if the obstructon is gone
+  //   dist = RPC.call("lidarRead").as<sensors>();  //Reading chnaging values from the M4 core
+  // }
   running = true;
   delay(50);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
 }
@@ -321,9 +324,7 @@ void collide() {
   Ensures: Tells robot follow a wall on the left or right. Uses a band to keep the robot at a certain distance to the wall. This code runs only when the mobile robot detects it is near a wall.
 
 */
-void followWall(){
-  
-
+void followWall() {
 }
 
 /*
@@ -331,7 +332,7 @@ void followWall(){
            Useful for troubleshooting purposes.
 */
 void blink(int led, int delaySeconds) {
-  pinMode(led, OUTPUT); //Commented OUT to speed up startup
+  pinMode(led, OUTPUT);  //Commented OUT to speed up startup
   for (int i = 0; i < 10; i++) {
     digitalWrite(led, LOW);
     delay(delaySeconds);
