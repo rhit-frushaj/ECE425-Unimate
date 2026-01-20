@@ -44,8 +44,8 @@ void setup() {
   } else {
     blink(redLED, 100);
   }
-  init_sensors();                    //initialize all sensors
   RPC.bind("lidarRead", lidarRead);  //Bind the lidarRead method to be callable from M7
+  init_sensors();                    //initialize all sensors
 }
 
 void loop() {
