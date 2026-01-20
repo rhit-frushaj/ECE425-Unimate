@@ -28,6 +28,8 @@ int leds[3] = { 5, 6, 7 };  //array of LED pin numbers
 #define ltStepPin 52      //left stepper motor step pin
 #define ltDirPin 53       //left stepper motor direction pin
 
+#define tooClose 5
+
 AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);  //create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
 AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);   //create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
 MultiStepper steppers;                                                 //create instance to control multiple steppers at the same time
@@ -62,9 +64,8 @@ void setup() {
   } else {
     blink(redLED, 100);
   }
-
+  RPC.bind("collide", collide);      //Binds collide to be called in M7
   delay(500);
-
 }
 
 void loop() {
@@ -110,10 +111,6 @@ void init_stepper() {
   float distance: Distance to move forwards in cm.
 */
 void forward(float distance) {
-  // Serial.println("forward function");
-  // digitalWrite(redLED, HIGH);//turn on red LED
-  // digitalWrite(grnLED, LOW);//turn off green LED
-  // digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
 
@@ -299,6 +296,28 @@ void goToGoalCm(float xg, float yg){ // cm
 }
 
 /*
+  Ensures: Method for the collide behavior. Simply Stalls out the robot until sensor reading changes
+*/
+void collide() {
+  //red light on
+  digitalWrite(redLED, 1);
+  digitalWrite(ylwLED, 0);
+  digitalWrite(grnLED, 0);
+  
+  running = false;   //allows to break out of any loops
+
+  //While logic that stays in loop until the obstruction is gone
+  while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    delay(50); //delay for which the robot checks if the obstructon is gone
+    dist = RPC.call("lidarRead").as<sensors>(); //Reading chnaging values from the M4 core 
+  }
+  running = true;
+  delay(50);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
+}
+
+
+
+/*
   Ensures: Tells robot follow a wall on the left or right. Uses a band to keep the robot at a certain distance to the wall. This code runs only when the mobile robot detects it is near a wall.
 
 */
@@ -307,3 +326,18 @@ void followWall(){
 
 }
 
+/*
+  Ensures: This method is universal for M4 and M7, blinks LED to know which core is initializing and calls RPC.Begin
+           Useful for troubleshooting purposes.
+*/
+void blink(int led, int delaySeconds) {
+  pinMode(led, OUTPUT); //Commented OUT to speed up startup
+  for (int i = 0; i < 10; i++) {
+    digitalWrite(led, LOW);
+    delay(delaySeconds);
+    digitalWrite(led, HIGH);
+    delay(delaySeconds);
+  }
+  RPC.begin();
+  digitalWrite(led, LOW);
+}
