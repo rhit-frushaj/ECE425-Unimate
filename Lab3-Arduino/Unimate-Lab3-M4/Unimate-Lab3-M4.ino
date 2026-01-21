@@ -34,7 +34,9 @@ struct sensors {
   MSGPACK_DEFINE_ARRAY(front, back, left, right);
 } dist{};
 
-#define tooClose 5
+#define tooClose 8
+
+bool running = true; // robot starts by running
 
 void setup() {
   Serial.begin(115200);
@@ -45,6 +47,7 @@ void setup() {
     blink(redLED, 100);
   }
   RPC.bind("lidarRead", lidarRead);  //Bind the lidarRead method to be callable from M7
+  RPC.bind("isRunning", isRunning);  //Bind the isRunning method to be callable from M7
   init_sensors();                    //initialize all sensors
 }
 
@@ -69,8 +72,11 @@ void loop() {
   dist.right = tempRightLidar / numSamples;
 
   if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){
-    RPC.call("collide");
-  } 
+    //RPC.call("collide");
+    running = false;
+  } else {
+    running = true;
+  }
   delay(10);  // Small delay to prevent overwhelming the sensors
 }
 
@@ -119,4 +125,11 @@ void init_sensors() {
   pinMode(backLdr, INPUT);
   pinMode(leftLdr, INPUT);
   pinMode(rightLdr, INPUT);
+}
+
+/*
+  Ensures: This is a getter method for the global running variable
+*/
+bool isRunning(){
+  return running;
 }
