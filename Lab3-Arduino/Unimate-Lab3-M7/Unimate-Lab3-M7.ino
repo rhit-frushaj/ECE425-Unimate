@@ -64,17 +64,24 @@ void setup() {
   } else {
     blink(redLED, 100);
   }
-  RPC.bind("collide", collide);  //Binds collide to be called in M7
   delay(500);
 }
 
 void loop() {
   // Read lidar data from M4
   dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
-  running = true;
+  running = RPC.call("isRunning").as<bool>();
+  if (running) {
   digitalWrite(redLED, 0);
   digitalWrite(ylwLED, 1);
   digitalWrite(grnLED, 0);
+  } else {
+  digitalWrite(redLED, 1);
+  digitalWrite(ylwLED, 0);
+  digitalWrite(grnLED, 0);
+  }
+  randomWander();
+  delay(50);
 }
 
 //function to set all stepper motor variables, outputs and LEDs
@@ -119,8 +126,10 @@ void forward(float distance) {
   int steps = (int)ceil((distance * 800.0) / (8.5 * PI));  //this converts based on wheel diameter to steps from distance in cm
   //Steps both motors forward for the num steps calculated for the input distance
   for (int x = 0; x < steps; x++) {
+    running = RPC.call("isRunning").as<bool>();
     if (!running) {
-      break;
+      Serial.println("collide forward");
+      return;
     }
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -138,7 +147,7 @@ void turn(int direction, int amount) {
   if (direction == 1) {                 // if CW
     for (int x = 0; x < amount; x++) {  // 1600 pulses on outside wheel
       if (running == false) {
-        break;
+        return;
       }
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
@@ -151,8 +160,8 @@ void turn(int direction, int amount) {
     }
   } else {                              //if CCW
     for (int x = 0; x < amount; x++) {  // 1600 pulses on outside wheel
-      if (running == false) {
-        break;
+      if (!running) {
+        return;
       }
       digitalWrite(rtStepPin, HIGH);
       digitalWrite(ltStepPin, HIGH);
@@ -230,12 +239,12 @@ void goToAngle(float thetag) {  // degrees
   } else {
     digitalWrite(ltDirPin, LOW);  //otherwise rotates CW, left motor reverses
   }
-  running = true;
   while (thetac < thetag) {  //main stepping loop, stops when current angle is equal to or greater than target angle
     // prevents this from being blocking, uses global variable to break free if necessary
-    if (running == false) {
-      Serial.println("breaking");
-      break;
+    running = RPC.call("isRunning").as<bool>();
+    if (!running) {
+      Serial.println("collide goToAngle");
+      return;
     }
     digitalWrite(rtStepPin, HIGH);
     digitalWrite(ltStepPin, HIGH);
@@ -297,30 +306,6 @@ void goToGoalCm(float xg, float yg) {  // cm
 }
 
 /*
-  Ensures: Method for the collide behavior. Simply Stalls out the robot until sensor reading changes
-*/
-void collide() {
-  //red light on
-  digitalWrite(redLED, 1);
-  digitalWrite(ylwLED, 0);
-  digitalWrite(grnLED, 0);
-
-  running = false;  //allows to break out of any loops
-
-
-
-  // //While logic that stays in loop until the obstruction is gone
-  // while ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
-  //   delay(50);                                   //delay for which the robot checks if the obstructon is gone
-  //   dist = RPC.call("lidarRead").as<sensors>();  //Reading chnaging values from the M4 core
-  // }
-  running = true;
-  delay(50);  //just set a constant stall time, this + the sensor refresh rate is the time it takes to notice the object disapears
-}
-
-
-
-/*
   Ensures: Tells robot follow a wall on the left or right. Uses a band to keep the robot at a certain distance to the wall. This code runs only when the mobile robot detects it is near a wall.
 
 */
@@ -341,4 +326,26 @@ void blink(int led, int delaySeconds) {
   }
   RPC.begin();
   digitalWrite(led, LOW);
+}
+
+/*
+  Ensures: Moves the robot in an apparently random fashion when viewed. Non-Blocking. It runs between random angles, and random forwards
+*/
+void randomWander() {
+  if (!running){
+    Serial.println("collideWander");
+    return;
+  }
+  //sets lights to green only on
+  digitalWrite(grnLED, HIGH);
+  digitalWrite(redLED, LOW);
+  digitalWrite(ylwLED, LOW);
+  
+  int randomBehavior = random(0, 4);  // chooses random behavior 0, 1, 2, 3
+  if (randomBehavior <= 1) {
+    double randomAngle = 1.0 * random(0, 361);  // chooses random angle to go to from 0-360 deg
+    goToAngle(randomAngle);                     // goes to random angle
+  } else {
+    forward(25);
+  }
 }
