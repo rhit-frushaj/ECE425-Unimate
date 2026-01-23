@@ -28,8 +28,6 @@ int leds[3] = { 5, 6, 7 };  //array of LED pin numbers
 #define ltStepPin 52      //left stepper motor step pin
 #define ltDirPin 53       //left stepper motor direction pin
 
-#define tooClose 5
-
 AccelStepper stepperRight(AccelStepper::DRIVER, rtStepPin, rtDirPin);  //create instance of right stepper motor object (2 driver pins, low to high transition step pin 52, direction input pin 53 (high means forward)
 AccelStepper stepperLeft(AccelStepper::DRIVER, ltStepPin, ltDirPin);   //create instance of left stepper motor object (2 driver pins, step pin 50, direction input pin 51)
 MultiStepper steppers;                                                 //create instance to control multiple steppers at the same time
@@ -80,8 +78,8 @@ void loop() {
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
   }
-  randomWander();
-  delay(50);
+  followWall();
+  //delay(50);
 }
 
 //function to set all stepper motor variables, outputs and LEDs
@@ -310,6 +308,54 @@ void goToGoalCm(float xg, float yg) {  // cm
 
 */
 void followWall() {
+  if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
+  Serial.println(
+    String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
+  float speed = max_speed - 800;
+  float otherSpeed = 0;
+  int upperMidBand = 21;
+  int lowerMidBand = 15;
+  int kp = 20;
+  int error = 0;
+  // left wall follow
+  if (dist.left > upperMidBand){  //for robot too far from wall
+    error = dist.left - (upperMidBand+lowerMidBand)/2;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperRight.setSpeed(speed);
+    stepperLeft.setSpeed(otherSpeed);
+    Serial.println("Right Speed"+ String(speed));
+    Serial.println("Left Speed"+String(otherSpeed));
+  } else if ((dist.left < lowerMidBand) && (dist.left > 0)){ // robot too close to wall
+    error = (upperMidBand+lowerMidBand)/2 - dist.left;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperRight.setSpeed(otherSpeed);
+    stepperLeft.setSpeed(speed);
+    Serial.println("Left Speed"+String(speed));
+    Serial.println("Right Speed"+String(otherSpeed));
+  }
+  // right wall follow
+  // if ((dist.right > upperMidBand)&& (dist.right < 30)){  //for robot too far from wall
+  //   error = dist.right - (upperMidBand+lowerMidBand)/2;
+  //   stepperLeft.setSpeed(speed);
+  //   stepperRight.setSpeed(speed - kp*error);
+  // } else if ((dist.right < lowerMidBand) && (dist.right > 0)){ // robot too close to wall
+  //   error = (upperMidBand+lowerMidBand)/2 - dist.right;
+  //   stepperLeft.setSpeed(speed - kp*error);
+  //   stepperRight.setSpeed(speed);
+  // }
+  for (int i = 0; i < 50; i++) {
+  stepperLeft.runSpeed();
+  stepperRight.runSpeed();
+  }
 }
 
 /*
