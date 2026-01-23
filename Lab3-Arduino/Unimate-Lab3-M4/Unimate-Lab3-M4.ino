@@ -34,7 +34,7 @@ struct sensors {
   MSGPACK_DEFINE_ARRAY(front, back, left, right);
 } dist{};
 
-#define tooClose 8
+#define tooClose 3
 
 bool running = true; // robot starts by running
 
