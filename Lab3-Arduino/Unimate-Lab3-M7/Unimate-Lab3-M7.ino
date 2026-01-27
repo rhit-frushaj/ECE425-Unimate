@@ -45,6 +45,8 @@ int wait_time = 1000;  //delay for printing data
 bool running = true;  // global variable to keep whether the robot should be running or not, controls blocking
 // Data to keep the lidar sensor data - taken from example code
 
+bool lastSeenWall = true; // global variable for wall follow to track what wall was lost to ensure proper corner following. true = right & false = left
+
 struct sensors {
   int front;
   int back;
@@ -78,7 +80,7 @@ void loop() {
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
   }
-  followWall();
+  followWallOuterCorner();
   //delay(50);
 }
 
@@ -377,6 +379,91 @@ void followWall() {
 }
 
 /*
+  Ensures: Tells robot follow a wall on the left or right. Uses a band to keep the robot at a certain distance to the wall. Robot then turns to follow an outide corner turn.
+
+*/
+void followWallOuterCorner() {
+  if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
+  Serial.println(
+    String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
+  float speed = max_speed - 1100;
+  float otherSpeed = max_speed - 1100;
+  int upperMidBand = 21;
+  int lowerMidBand = 15;
+  int kp = 15;
+  int error = 0;
+  // left wall follow
+   if ((dist.left > 0) && (dist.right == 0)){
+    lastSeenWall = false; 
+  if (dist.left > upperMidBand){  //for robot too far from wall
+    error = dist.left - (upperMidBand+lowerMidBand)/2;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperRight.setSpeed(-1.0 * otherSpeed);
+    stepperLeft.setSpeed(-1.0 * speed);
+    Serial.println("Right Speed"+ String(speed));
+    Serial.println("Left Speed"+String(otherSpeed));
+  } else if ((dist.left < lowerMidBand) && (dist.left > 0)){ // robot too close to wall
+    error = (upperMidBand+lowerMidBand)/2 - dist.left;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperRight.setSpeed(-1.0 * speed);
+    stepperLeft.setSpeed(-1.0 * otherSpeed);
+    Serial.println("Left Speed"+String(speed));
+    Serial.println("Right Speed"+String(otherSpeed));
+  }
+   } else if ((dist.right > 0) && (dist.left == 0)){
+      lastSeenWall = true;
+      if (dist.right > upperMidBand){  //for robot too far from wall
+    error = dist.right - (upperMidBand+lowerMidBand)/2;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperLeft.setSpeed(-1.0 * otherSpeed);
+    stepperRight.setSpeed(-1.0 * speed);
+    Serial.println("Left Speed"+ String(speed));
+    Serial.println("Right Speed"+String(otherSpeed));
+  } else if ((dist.right < lowerMidBand) && (dist.right > 0)){ // robot too close to wall
+    error = (upperMidBand+lowerMidBand)/2 - dist.right;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperLeft.setSpeed(-1.0 * speed);
+    stepperRight.setSpeed(-1.0 * otherSpeed);
+    Serial.println("Right Speed"+String(speed));
+    Serial.println("Left Speed"+String(otherSpeed));
+  } else { // lost both walls
+    forward(20);
+    if (lastSeenWall){ // if it was right wall following 
+      goToAngle(270);
+    } else {
+      goToAngle(90);
+    }
+    forward(20);
+  }
+   }
+  for (int i = 0; i < 5; i++) {
+      if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
+  stepperLeft.runSpeed();
+  stepperRight.runSpeed();
+  }
+  
+}
+
+
+/*
   Ensures: This method is universal for M4 and M7, blinks LED to know which core is initializing and calls RPC.Begin
            Useful for troubleshooting purposes.
 */
@@ -413,3 +500,5 @@ void randomWander() {
     forward(25);
   }
 }
+
+
