@@ -314,13 +314,14 @@ void followWall() {
     }
   Serial.println(
     String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
-  float speed = max_speed - 800;
-  float otherSpeed = max_speed - 800;
+  float speed = max_speed - 1100;
+  float otherSpeed = max_speed - 1100;
   int upperMidBand = 21;
   int lowerMidBand = 15;
-  int kp = 30;
+  int kp = 15;
   int error = 0;
   // left wall follow
+   if ((dist.left > 0) && (dist.right == 0)){
   if (dist.left > upperMidBand){  //for robot too far from wall
     error = dist.left - (upperMidBand+lowerMidBand)/2;
     otherSpeed = speed - kp*error;
@@ -342,17 +343,34 @@ void followWall() {
     Serial.println("Left Speed"+String(speed));
     Serial.println("Right Speed"+String(otherSpeed));
   }
-  // right wall follow
-  // if ((dist.right > upperMidBand)&& (dist.right < 30)){  //for robot too far from wall
-  //   error = dist.right - (upperMidBand+lowerMidBand)/2;
-  //   stepperLeft.setSpeed(speed);
-  //   stepperRight.setSpeed(speed - kp*error);
-  // } else if ((dist.right < lowerMidBand) && (dist.right > 0)){ // robot too close to wall
-  //   error = (upperMidBand+lowerMidBand)/2 - dist.right;
-  //   stepperLeft.setSpeed(speed - kp*error);
-  //   stepperRight.setSpeed(speed);
-  // }
-  for (int i = 0; i < 10; i++) {
+   } else if ((dist.right > 0) && (dist.left == 0)){
+      if (dist.right > upperMidBand){  //for robot too far from wall
+    error = dist.right - (upperMidBand+lowerMidBand)/2;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperLeft.setSpeed(-1.0 * otherSpeed);
+    stepperRight.setSpeed(-1.0 * speed);
+    Serial.println("Left Speed"+ String(speed));
+    Serial.println("Right Speed"+String(otherSpeed));
+  } else if ((dist.right < lowerMidBand) && (dist.right > 0)){ // robot too close to wall
+    error = (upperMidBand+lowerMidBand)/2 - dist.right;
+    otherSpeed = speed - kp*error;
+    if (otherSpeed < 0){
+      otherSpeed = 0;
+    }
+    stepperLeft.setSpeed(-1.0 * speed);
+    stepperRight.setSpeed(-1.0 * otherSpeed);
+    Serial.println("Right Speed"+String(speed));
+    Serial.println("Left Speed"+String(otherSpeed));
+  }
+   }
+  for (int i = 0; i < 5; i++) {
+      if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
   stepperLeft.runSpeed();
   stepperRight.runSpeed();
   }
