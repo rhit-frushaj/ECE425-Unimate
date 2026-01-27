@@ -22,6 +22,8 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 #define max_speed 1000 //maximum stepper motor speed
 #define max_accel 10000 //maximum motor acceleration
 
+int counter = 1000;
+
 void init_stepper(){
   pinMode(rtStepPin, OUTPUT);//sets pin as output
   pinMode(rtDirPin, OUTPUT);//sets pin as output
@@ -51,7 +53,7 @@ void setup() {
 
   // steppers.runSpeedToPosition();     // actually move them
 
-
+  stepperRight.setSpeed(100);
 
 }
 
@@ -60,8 +62,16 @@ void loop(){
   // steppers.run(); //This section does not work, example of how not to work
   // delay(250);
   // Serial.println("running...");
+  if(counter < 0){
+    counter = max_speed;
+  }
+  Serial.println(counter);
+  stepperRight.setSpeed(counter);
+  stepperRight.runSpeed();
 
-  steppers.run();
+  counter--;
+  delay(5);
+  // steppers.run();
 }
 
 

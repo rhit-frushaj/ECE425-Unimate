@@ -60,16 +60,16 @@ void loop() {
 
   //Samples the sensors N times and averages their readings
   for (int i = 0; i < numSamples; i++) {
-    tempRightLidar += read_lidar(rightLdr);
+    tempRightLidar += read_lidar(rightLdr); // !! THESE HAVE BEEN FLIPPED ON PURPOSE SINCE THE ROBOT IS IN REVERSE !!
     tempLeftLidar += read_lidar(leftLdr);
     tempFrontLidar += read_lidar(frontLdr);
     tempBackLidar += read_lidar(backLdr);
   }
 
-  dist.front = tempFrontLidar / numSamples;
-  dist.back = tempBackLidar / numSamples;
-  dist.left = tempLeftLidar / numSamples;
-  dist.right = tempRightLidar / numSamples;
+  dist.back = tempFrontLidar / numSamples;
+  dist.front = tempBackLidar / numSamples;
+  dist.right = tempLeftLidar / numSamples;
+  dist.left = tempRightLidar / numSamples;
 
   if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){
     //RPC.call("collide");

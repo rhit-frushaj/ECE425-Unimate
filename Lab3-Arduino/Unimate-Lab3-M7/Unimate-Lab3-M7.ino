@@ -315,10 +315,10 @@ void followWall() {
   Serial.println(
     String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
   float speed = max_speed - 800;
-  float otherSpeed = 0;
+  float otherSpeed = max_speed - 800;
   int upperMidBand = 21;
   int lowerMidBand = 15;
-  int kp = 20;
+  int kp = 30;
   int error = 0;
   // left wall follow
   if (dist.left > upperMidBand){  //for robot too far from wall
@@ -327,8 +327,8 @@ void followWall() {
     if (otherSpeed < 0){
       otherSpeed = 0;
     }
-    stepperRight.setSpeed(speed);
-    stepperLeft.setSpeed(otherSpeed);
+    stepperRight.setSpeed(-1.0 * otherSpeed);
+    stepperLeft.setSpeed(-1.0 * speed);
     Serial.println("Right Speed"+ String(speed));
     Serial.println("Left Speed"+String(otherSpeed));
   } else if ((dist.left < lowerMidBand) && (dist.left > 0)){ // robot too close to wall
@@ -337,8 +337,8 @@ void followWall() {
     if (otherSpeed < 0){
       otherSpeed = 0;
     }
-    stepperRight.setSpeed(otherSpeed);
-    stepperLeft.setSpeed(speed);
+    stepperRight.setSpeed(-1.0 * speed);
+    stepperLeft.setSpeed(-1.0 * otherSpeed);
     Serial.println("Left Speed"+String(speed));
     Serial.println("Right Speed"+String(otherSpeed));
   }
@@ -352,7 +352,7 @@ void followWall() {
   //   stepperLeft.setSpeed(speed - kp*error);
   //   stepperRight.setSpeed(speed);
   // }
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < 10; i++) {
   stepperLeft.runSpeed();
   stepperRight.runSpeed();
   }
