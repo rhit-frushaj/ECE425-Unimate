@@ -37,16 +37,23 @@ MultiStepper steppers;                                                 //create 
 #define max_speed 1636       //maximum stepper motor speed
 #define max_accel 10000      //maximum motor acceleration
 
+#define centerDeadband 3
 
 int pauseTime = 2500;  //time before robot moves
 int stepTime = 500;    //delay time between high and low on step pin
 int wait_time = 1000;  //delay for printing data
 
 bool running = true;  // global variable to keep whether the robot should be running or not, controls blocking
-// Data to keep the lidar sensor data - taken from example code
 
 bool lastSeenWall = true; // global variable for wall follow to track what wall was lost to ensure proper corner following. true = right & false = left
 
+int state = 0; //Main State Controll Variable for the State Machine
+// 0: Random Wander
+// 1: Follow Wall
+// 2: Follow Center
+// 3: ...
+
+// Data to keep the lidar sensor data - taken from example code
 struct sensors {
   int front;
   int back;
@@ -80,8 +87,11 @@ void loop() {
   digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
   }
-  followWallOuterCorner();
+  // followWallOuterCorner();
   //delay(50);
+
+  followCenterLogic();
+
 }
 
 //function to set all stepper motor variables, outputs and LEDs
@@ -501,4 +511,113 @@ void randomWander() {
   }
 }
 
+/*
+  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects. Uses lidar and calculated vector to turn an angle and move away.
+
+  Output: Robot motion based on external stimuli. 
+*/
+void runAway() {
+  digitalWrite(redLED, 0);
+  digitalWrite(ylwLED, 1);
+  digitalWrite(grnLED, 0);
+
+  if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
+    forward(10);
+    return;
+  }
+
+  if (dist.front != 0 && dist.back != 0 && dist.left == 0 && dist.right == 0) {  //special case for when two wall front and back only
+    goToAngle(90);
+    forward(10);
+    return;
+  }
+
+  if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
+    // multiplies direction vector by -1 to ensure it is repelled
+    float x_result = -1.0 * x_vector();
+    float y_result = -1.0 * y_vector();
+
+    float theta = atan2(y_result, x_result) * (180 / PI);
+    if (theta < 0) {
+      theta = 360 + theta;  //this converts the angle back to 0 -> 360
+    }
+    Serial.println(theta);
+
+    float magnitude = sqrt(x_result * x_result + y_result * y_result);
+    if (magnitude < 3.0) {  // threshold
+      return;               // forces too weak, don't move
+    }
+    goToAngle(theta);
+    forward(10);
+  }
+}
+
+/*
+  Ensures: Returns the X component of the vector that points twoards the object it sees
+
+  Returns: Float representing the force 
+*/
+float x_vector() {
+  float kp = 100; //scaler gain
+  float front_force = (dist.front > 0) ? (1.0 / dist.front) : 0.0;  //stops dividing by 0 which would be an error
+  float back_force = (dist.back > 0) ? (1.0 / dist.back) : 0.0;
+  return kp * (front_force - back_force);
+}
+
+/*
+  Ensures: Returns the Y component of the vector that points twoards the object it sees
+*/
+float y_vector() {
+  float kp = 100;//scaler gain
+  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0; //stops dividing by 0 which would be an error
+  float right_force = (dist.right > 0) ? (1.0 / dist.right) : 0.0;
+  return kp * (left_force - right_force);
+}
+
+/*
+  Ensures: Keep the robot centered while driving between two walls, uses proportional control
+*/
+void followCenter(){
+
+  int error = dist.left - dist.right; // If positive: farther to left, If Negavive farther to right
+  
+  int rightSpeed = 500;
+  int leftSpeed = 500;
+  int kp = 20;
+
+  if(abs(error) > centerDeadband){
+
+    if(error > 0){
+      leftSpeed -= kp*error;
+    } else{
+      rightSpeed -= kp*-1*error; //this error would be nagative, don't want to make speed faster by subtracting negative so must multiply -1
+    }
+  }
+
+  stepperRight.setSpeed(-1.0 * leftSpeed);
+  stepperLeft.setSpeed(-1.0 * rightSpeed);
+
+  for(int i = 0; i < 10; i++){
+    stepperRight.runSpeed();
+    stepperLeft.runSpeed();
+  }
+
+}
+
+/*
+  Ensures: This is the main state logic to switch between follow wall, follow center, and random wander
+*/
+void followCenterLogic(){
+
+  if(dist.left != 0 && dist.right != 0){
+    followCenter();
+  }else if(dist.left != 0 || dist.right != 0){
+    followWall();
+  }else{
+    randomWander();
+  }
+
+
+
+}
 
