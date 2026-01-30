@@ -95,10 +95,10 @@ void loop() {
     digitalWrite(ylwLED, 0);
     digitalWrite(grnLED, 0);
   }
-  followWall();
+  // followWall();
   // followWallInnerCorner();
   //delay(50);
-  // goToGoalAvoidance(72 * 2.54, 0);
+  goToGoalAvoidance(72 * 2.54, 0);
   //followCenterLogic();
 }
 
@@ -680,81 +680,6 @@ void followCenterLogic() {
 }
 
 /*
-  Ensures: Takes robot to relative goal position in the shortest ossible distance (line). Deviates from path if obstacle in path.
-           The coordinate system of the robot can be visualized below:
-
-                ^ X
-                |
-                |
-                |
-      <---------|        
-      Y
-    
-  float xg: X coordinate of the desired ending location in centimeters.
-  float yg: Y coordinate of the desired ending location in centimeters.
-
-*/
-void goToGoalAvoidance(float xg, float yg) {
-
-
-  int detectDist = 15;
-  float theta_initial = atan2(yg, xg) * (180 / PI);
-  if (theta_initial < 0) {
-    theta_initial = 360 + tc;  //this converts the angle back to 0 -> 360
-  }
-  goToAngle(tc);
-  float error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));  //calculate distance from goal from current location
-  while (error > 4) {
-    if (!running) {
-      continue;
-    }
-    // Serial.print("xc: ");
-    // Serial.println(xc);
-    // Serial.print("yc: ");
-    // Serial.println(yc);
-    // Serial.print("tc: ");
-    // Serial.println(tc);
-    Serial.println(error);
-    dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
-    if (dist.front >= detectDist || dist.front == 0) {
-      digitalWrite(ltDirPin, LOW);  // Enables the motor to move in a particular direction
-      digitalWrite(rtDirPin, LOW);  // Enables the motor to move in a particular direction
-
-      //Taking one Step of the motors
-      digitalWrite(rtStepPin, HIGH);
-      digitalWrite(ltStepPin, HIGH);
-      delayMicroseconds(stepTime);
-      digitalWrite(rtStepPin, LOW);
-      digitalWrite(ltStepPin, LOW);
-      delayMicroseconds(stepTime);
-
-      //Update global positions based on current angle and positions
-      xc += ((8.5 * PI) / 800) * cos(tc * (PI / 180));
-      yc -= ((8.5 * PI) / 800) * sin(tc * (PI / 180));
-
-      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));
-
-    } else if ((dist.front < detectDist) && dist.front != 0) {  //obstacle detected
-
-      //if something is detected and the left is free, does this scriped movement (turn, forward, turn back to goal)
-      tc += 90;
-      goToAngle(90);
-      reverse(30);  //go 15 centimeters blocking
-      yc += 30 * sin(tc * (PI / 180));
-      xc += 30 * cos(tc * (PI / 180));
-
-      float returnAngle = atan2(yg - yc, xg - xc) * (180 / PI);
-      tc += returnAngle;
-      if (returnAngle < 0) {
-        returnAngle = 360 + returnAngle;  //this converts the angle back to 0 -> 360
-      }
-      // Serial.println(returnAngle);
-      goToAngle(returnAngle-tc);
-    }
-  }
-}
-
-/*
   Ensures: Returns the X component of the vector that points twoards the object it sees
 
   Returns: Float representing the force 
@@ -815,4 +740,108 @@ void runAway() {
     goToAngle(theta);
     forward(10);
   }
+}
+
+/*
+  Ensures: Takes robot to relative goal position in the shortest possible distance (line). Deviates from path if obstacle in path.
+           The coordinate system of the robot can be visualized below:
+
+                ^ X
+                |
+                |
+                |
+      <---------|        
+      Y
+    
+  float xg: X coordinate of the desired ending location in centimeters.
+  float yg: Y coordinate of the desired ending location in centimeters.
+
+*/
+void goToGoalAvoidance(float xg, float yg) {
+
+  int detectDist = 15;
+  
+  // Calculate initial angle to goal and turn to face it
+  float theta_initial = atan2(yg - yc, xg - xc) * (180 / PI); //in degrees
+  if (theta_initial < 0) {
+    theta_initial = 360 + theta_initial;  // Convert to 0 -> 360
+  }
+  
+  // Turn to face goal initially (goToAngle uses RELATIVE angles)
+  float angleToTurn = theta_initial - tc;
+  // Normalize to 0-360 range
+  while (angleToTurn < 0) angleToTurn += 360;
+  while (angleToTurn >= 360) angleToTurn -= 360;
+  
+  goToAngle(angleToTurn);
+  tc = theta_initial;  // Update global orientation
+  
+  float error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));  // Calculate distance from goal (initial error)
+  
+  while (error > 4) { //four is a static distance that we set as close enough to goal (linear distance of 4cm around goal location)
+    if (!running) {
+      continue;
+    }
+    
+    dist = RPC.call("lidarRead").as<sensors>();  // Get sensor data
+    
+    if (dist.front >= detectDist || dist.front == 0) { //move forward if nothing is in front or if 
+      // Path is clear, move forward one step
+      digitalWrite(ltDirPin, LOW);  // Reverse direction
+      digitalWrite(rtDirPin, LOW);
+
+      // Take one step
+      digitalWrite(rtStepPin, HIGH);
+      digitalWrite(ltStepPin, HIGH);
+      delayMicroseconds(stepTime);
+      digitalWrite(rtStepPin, LOW);
+      digitalWrite(ltStepPin, LOW);
+      delayMicroseconds(stepTime);
+
+      // Update global positions based on current angle for one step
+      xc += ((8.5 * PI) / 800) * cos(tc * (PI / 180));
+      yc += ((8.5 * PI) / 800) * sin(tc * (PI / 180));
+
+      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc)); //recalculate error
+
+    } else if ((dist.front < detectDist) && dist.front != 0) {  
+      // Obstacle detected - avoidance maneuver
+      
+      Serial.println(tc);
+      
+      // Turn RIGHT 90 degrees
+      goToAngle(270);  // goToAngle will turn 270 which is same as CW 90 (right turn)
+      tc -= 90;  // Turning right decreases angle
+      if (tc < 0) {
+        tc += 360;  // Keep in 0-360 range
+      }      
+      // Move forward 30 cm (using reverse function since robot drives backwards), hard coded value to move
+      reverse(30);
+      
+      // Update position based on direction we just moved
+      xc += 30 * cos(tc * (PI / 180));
+      yc += 30 * sin(tc * (PI / 180));
+           
+      // Calculate new angle to goal from current position
+      float theta_to_goal = atan2(yg - yc, xg - xc) * (180 / PI);
+      if (theta_to_goal < 0) {
+        theta_to_goal = 360 + theta_to_goal;
+      }
+      
+      // Calculate RELATIVE turn needed from current orientation
+      float turnAngle = theta_to_goal - tc;
+      // Normalize to 0-360 range for goToAngle
+      while (turnAngle < 0) turnAngle += 360;
+      while (turnAngle >= 360) turnAngle -= 360;
+
+      // Turn to face goal
+      goToAngle(turnAngle);
+      tc = theta_to_goal;  // Update global orientation to absolute goal angle
+      
+      // Recalculate error
+      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));
+    }
+  }
+  
+  Serial.println("Goal reached!");
 }
