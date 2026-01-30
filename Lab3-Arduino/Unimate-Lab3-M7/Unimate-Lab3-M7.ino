@@ -87,7 +87,7 @@ void loop() {
     digitalWrite(ylwLED, 0);
     digitalWrite(grnLED, 0);
   }
-  followWallOuterCorner();
+  followWallInnerCorner();
   //delay(50);
 
   //followCenterLogic();
@@ -480,24 +480,105 @@ void followWallOuterCorner() {
   } else if (lastSeenWall && (dist.right == 0)) {  // lost right wall
     reverse(20);
     goToAngle(270);
-    reverse(10);
+    reverse(15);
     return;
-  } else if ((!lastSeenWall) && (dist.left == 0)){  // lost left wall
+  } else if ((!lastSeenWall) && (dist.left == 0)) {  // lost left wall
     reverse(20);
-  goToAngle(90);
-  reverse(10);
-  return;
-} else { // if detects obstacle in both exits corner follow
-return;
-}
-for (int i = 0; i < 5; i++) {
-  if (!running) {
-    Serial.println("collide followWall");
+    goToAngle(90);
+    reverse(15);
+    return;
+  } else {  // if detects obstacle in both exits corner follow
     return;
   }
-  stepperLeft.runSpeed();
-  stepperRight.runSpeed();
+  for (int i = 0; i < 5; i++) {
+    if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
+    stepperLeft.runSpeed();
+    stepperRight.runSpeed();
+  }
 }
+
+/*
+  Ensures: Tells robot follow a wall on the left or right. Uses a band to keep the robot at a certain distance to the wall. Robot then turns to follow an outide corner turn.
+
+*/
+void followWallInnerCorner() {
+  if (!running) {
+    Serial.println("collide followWallCorner");
+    return;
+  }
+  Serial.println(
+    String("Sensor Values (Front, Back, Left, Right): ") + dist.front + ", " + dist.back + ", " + dist.left + ", " + dist.right);
+  float speed = max_speed - 1100;
+  float otherSpeed = max_speed - 1100;
+  int upperMidBand = 21;
+  int lowerMidBand = 15;
+  int kp = 15;
+  int error = 0;
+  // left wall follow with no front obstacle
+  if ((dist.left > 0) && (dist.right == 0) && (dist.front > 15 || dist.front == 0)) {
+    if (dist.left > upperMidBand) {  //for robot too far from wall
+      error = dist.left - (upperMidBand + lowerMidBand) / 2;
+      otherSpeed = speed - kp * error;
+      if (otherSpeed < 0) {
+        otherSpeed = 0;
+      }
+      stepperRight.setSpeed(-1.0 * otherSpeed);
+      stepperLeft.setSpeed(-1.0 * speed);
+      Serial.println("Right Speed" + String(speed));
+      Serial.println("Left Speed" + String(otherSpeed));
+    } else if ((dist.left < lowerMidBand) && (dist.left > 0)) {  // robot too close to wall
+      error = (upperMidBand + lowerMidBand) / 2 - dist.left;
+      otherSpeed = speed - kp * error;
+      if (otherSpeed < 0) {
+        otherSpeed = 0;
+      }
+      stepperRight.setSpeed(-1.0 * speed);
+      stepperLeft.setSpeed(-1.0 * otherSpeed);
+      Serial.println("Left Speed" + String(speed));
+      Serial.println("Right Speed" + String(otherSpeed));
+    }
+  } else if ((dist.right > 0) && (dist.left == 0) && (dist.front > 15 || dist.front == 0)) { // right wall following no front wall
+    if (dist.right > upperMidBand) {  //for robot too far from wall
+      error = dist.right - (upperMidBand + lowerMidBand) / 2;
+      otherSpeed = speed - kp * error;
+      if (otherSpeed < 0) {
+        otherSpeed = 0;
+      }
+      stepperLeft.setSpeed(-1.0 * otherSpeed);
+      stepperRight.setSpeed(-1.0 * speed);
+      Serial.println("Left Speed" + String(speed));
+      Serial.println("Right Speed" + String(otherSpeed));
+    } else if ((dist.right < lowerMidBand) && (dist.right > 0)) {  // robot too close to wall
+      error = (upperMidBand + lowerMidBand) / 2 - dist.right;
+      otherSpeed = speed - kp * error;
+      if (otherSpeed < 0) {
+        otherSpeed = 0;
+      }
+      stepperLeft.setSpeed(-1.0 * speed);
+      stepperRight.setSpeed(-1.0 * otherSpeed);
+      Serial.println("Right Speed" + String(speed));
+      Serial.println("Left Speed" + String(otherSpeed));
+    }
+  } else if ((dist.right > 0) && (dist.left == 0) && (dist.front <= 15) && (dist.front != 0)) {  // right wall follow + front obstacle detected
+    goToAngle(90);
+    return;
+  } else if ((dist.left > 0) && (dist.right == 0) && (dist.front <= 15) && (dist.front != 0)) {  // left wall follow + front obstacle detected
+    goToAngle(270);
+    return;
+  } else {  // if detects obstacle in both exits corner follow
+    return;
+  }
+  for (int i = 0; i < 5; i++) {
+    if (!running) {
+      Serial.println("collide followWall");
+      return;
+    }
+    stepperLeft.runSpeed();
+    stepperRight.runSpeed();
+  }
 }
 
 
