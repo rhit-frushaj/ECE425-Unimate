@@ -45,6 +45,7 @@ void setup() {
     blink(ylwLED, 100);
   } else {
     blink(redLED, 100);
+
   }
   RPC.bind("lidarRead", lidarRead);  //Bind the lidarRead method to be callable from M7
   RPC.bind("isRunning", isRunning);  //Bind the isRunning method to be callable from M7
@@ -71,12 +72,12 @@ void loop() {
   dist.right = tempLeftLidar / numSamples;
   dist.left = tempRightLidar / numSamples;
 
-  if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){
-    //RPC.call("collide");
-    running = false;
-  } else {
-    running = true;
-  }
+  // if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){
+  //   //RPC.call("collide");
+  //   running = false;
+  // } else {
+  //   running = true;
+  // }
   delay(10);  // Small delay to prevent overwhelming the sensors
 }
 

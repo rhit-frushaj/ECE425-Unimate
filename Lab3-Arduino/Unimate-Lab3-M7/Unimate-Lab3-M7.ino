@@ -47,6 +47,14 @@ bool running = true;  // global variable to keep whether the robot should be run
 
 bool lastSeenWall = true;  // global variable for wall follow to track what wall was lost to ensure proper corner following. true = right & false = left
 
+// Variables to keep track of robot position and calculate
+float xc = 0;
+float yc = 0;
+float tc = 0;
+
+int preError; //error info for derivative control
+int dE;
+
 int state = 0;  //Main State Controll Variable for the State Machine
 // 0: Random Wander
 // 1: Follow Wall
@@ -87,9 +95,10 @@ void loop() {
     digitalWrite(ylwLED, 0);
     digitalWrite(grnLED, 0);
   }
-  followWallInnerCorner();
+  followWall();
+  // followWallInnerCorner();
   //delay(50);
-
+  // goToGoalAvoidance(72 * 2.54, 0);
   //followCenterLogic();
 }
 
@@ -356,12 +365,13 @@ void followWall() {
   int upperMidBand = 21;
   int lowerMidBand = 15;
   int kp = 15;
+  int kd = 5;
   int error = 0;
   // left wall follow
   if ((dist.left > 0) && (dist.right == 0)) {
     if (dist.left > upperMidBand) {  //for robot too far from wall
       error = dist.left - (upperMidBand + lowerMidBand) / 2;
-      otherSpeed = speed - kp * error;
+      otherSpeed = speed - kp * error + kd * dE; //slowing down wheel proportionally to error and propotional to change in error
       if (otherSpeed < 0) {
         otherSpeed = 0;
       }
@@ -369,9 +379,10 @@ void followWall() {
       stepperLeft.setSpeed(-1.0 * speed);
       Serial.println("Right Speed" + String(speed));
       Serial.println("Left Speed" + String(otherSpeed));
+      preError = error;
     } else if ((dist.left < lowerMidBand) && (dist.left > 0)) {  // robot too close to wall
       error = (upperMidBand + lowerMidBand) / 2 - dist.left;
-      otherSpeed = speed - kp * error;
+      otherSpeed = speed - kp * error - kd * dE;
       if (otherSpeed < 0) {
         otherSpeed = 0;
       }
@@ -379,8 +390,9 @@ void followWall() {
       stepperLeft.setSpeed(-1.0 * otherSpeed);
       Serial.println("Left Speed" + String(speed));
       Serial.println("Right Speed" + String(otherSpeed));
+      preError = error;
     }
-  } else if ((dist.right > 0) && (dist.left == 0)) {
+  } else if ((dist.right > 0) && (dist.left == 0)) { //follow the right wall
     if (dist.right > upperMidBand) {  //for robot too far from wall
       error = dist.right - (upperMidBand + lowerMidBand) / 2;
       otherSpeed = speed - kp * error;
@@ -540,8 +552,8 @@ void followWallInnerCorner() {
       Serial.println("Left Speed" + String(speed));
       Serial.println("Right Speed" + String(otherSpeed));
     }
-  } else if ((dist.right > 0) && (dist.left == 0) && (dist.front > 15 || dist.front == 0)) { // right wall following no front wall
-    if (dist.right > upperMidBand) {  //for robot too far from wall
+  } else if ((dist.right > 0) && (dist.left == 0) && (dist.front > 15 || dist.front == 0)) {  // right wall following no front wall
+    if (dist.right > upperMidBand) {                                                          //for robot too far from wall
       error = dist.right - (upperMidBand + lowerMidBand) / 2;
       otherSpeed = speed - kp * error;
       if (otherSpeed < 0) {
@@ -621,69 +633,6 @@ void randomWander() {
 }
 
 /*
-  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects. Uses lidar and calculated vector to turn an angle and move away.
-
-  Output: Robot motion based on external stimuli. 
-*/
-void runAway() {
-  digitalWrite(redLED, 0);
-  digitalWrite(ylwLED, 1);
-  digitalWrite(grnLED, 0);
-
-  if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
-    forward(10);
-    return;
-  }
-
-  if (dist.front != 0 && dist.back != 0 && dist.left == 0 && dist.right == 0) {  //special case for when two wall front and back only
-    goToAngle(90);
-    forward(10);
-    return;
-  }
-
-  if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
-    // multiplies direction vector by -1 to ensure it is repelled
-    float x_result = -1.0 * x_vector();
-    float y_result = -1.0 * y_vector();
-
-    float theta = atan2(y_result, x_result) * (180 / PI);
-    if (theta < 0) {
-      theta = 360 + theta;  //this converts the angle back to 0 -> 360
-    }
-    Serial.println(theta);
-
-    float magnitude = sqrt(x_result * x_result + y_result * y_result);
-    if (magnitude < 3.0) {  // threshold
-      return;               // forces too weak, don't move
-    }
-    goToAngle(theta);
-    forward(10);
-  }
-}
-
-/*
-  Ensures: Returns the X component of the vector that points twoards the object it sees
-
-  Returns: Float representing the force 
-*/
-float x_vector() {
-  float kp = 100;                                                   //scaler gain
-  float front_force = (dist.front > 0) ? (1.0 / dist.front) : 0.0;  //stops dividing by 0 which would be an error
-  float back_force = (dist.back > 0) ? (1.0 / dist.back) : 0.0;
-  return kp * (front_force - back_force);
-}
-
-/*
-  Ensures: Returns the Y component of the vector that points twoards the object it sees
-*/
-float y_vector() {
-  float kp = 100;                                                //scaler gain
-  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0;  //stops dividing by 0 which would be an error
-  float right_force = (dist.right > 0) ? (1.0 / dist.right) : 0.0;
-  return kp * (left_force - right_force);
-}
-
-/*
   Ensures: Keep the robot centered while driving between two walls, uses proportional control
 */
 void followCenter() {
@@ -727,5 +676,143 @@ void followCenterLogic() {
     followWall();
   } else {
     randomWander();
+  }
+}
+
+/*
+  Ensures: Takes robot to relative goal position in the shortest ossible distance (line). Deviates from path if obstacle in path.
+           The coordinate system of the robot can be visualized below:
+
+                ^ X
+                |
+                |
+                |
+      <---------|        
+      Y
+    
+  float xg: X coordinate of the desired ending location in centimeters.
+  float yg: Y coordinate of the desired ending location in centimeters.
+
+*/
+void goToGoalAvoidance(float xg, float yg) {
+
+
+  int detectDist = 15;
+  float theta_initial = atan2(yg, xg) * (180 / PI);
+  if (theta_initial < 0) {
+    theta_initial = 360 + tc;  //this converts the angle back to 0 -> 360
+  }
+  goToAngle(tc);
+  float error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));  //calculate distance from goal from current location
+  while (error > 4) {
+    if (!running) {
+      continue;
+    }
+    // Serial.print("xc: ");
+    // Serial.println(xc);
+    // Serial.print("yc: ");
+    // Serial.println(yc);
+    // Serial.print("tc: ");
+    // Serial.println(tc);
+    Serial.println(error);
+    dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
+    if (dist.front >= detectDist || dist.front == 0) {
+      digitalWrite(ltDirPin, LOW);  // Enables the motor to move in a particular direction
+      digitalWrite(rtDirPin, LOW);  // Enables the motor to move in a particular direction
+
+      //Taking one Step of the motors
+      digitalWrite(rtStepPin, HIGH);
+      digitalWrite(ltStepPin, HIGH);
+      delayMicroseconds(stepTime);
+      digitalWrite(rtStepPin, LOW);
+      digitalWrite(ltStepPin, LOW);
+      delayMicroseconds(stepTime);
+
+      //Update global positions based on current angle and positions
+      xc += ((8.5 * PI) / 800) * cos(tc * (PI / 180));
+      yc -= ((8.5 * PI) / 800) * sin(tc * (PI / 180));
+
+      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));
+
+    } else if ((dist.front < detectDist) && dist.front != 0) {  //obstacle detected
+
+      //if something is detected and the left is free, does this scriped movement (turn, forward, turn back to goal)
+      tc += 90;
+      goToAngle(90);
+      reverse(30);  //go 15 centimeters blocking
+      yc += 30 * sin(tc * (PI / 180));
+      xc += 30 * cos(tc * (PI / 180));
+
+      float returnAngle = atan2(yg - yc, xg - xc) * (180 / PI);
+      tc += returnAngle;
+      if (returnAngle < 0) {
+        returnAngle = 360 + returnAngle;  //this converts the angle back to 0 -> 360
+      }
+      // Serial.println(returnAngle);
+      goToAngle(returnAngle-tc);
+    }
+  }
+}
+
+/*
+  Ensures: Returns the X component of the vector that points twoards the object it sees
+
+  Returns: Float representing the force 
+*/
+float x_vector() {
+  float kp = 100; //scaler gain
+  float front_force = (dist.front > 0) ? (1.0 / dist.front) : 0.0;  //stops dividing by 0 which would be an error
+  float back_force = (dist.back > 0) ? (1.0 / dist.back) : 0.0;
+  return kp * (front_force - back_force);
+}
+
+/*
+  Ensures: Returns the Y component of the vector that points twoards the object it sees
+*/
+float y_vector() {
+  float kp = 100;//scaler gain
+  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0; //stops dividing by 0 which would be an error
+  float right_force = (dist.right > 0) ? (1.0 / dist.right) : 0.0;
+  return kp * (left_force - right_force);
+}
+
+/*
+  Ensures: Impliments a potential field protocol that uses the four lidar sensors to be repulsed from external objects. Uses lidar and calculated vector to turn an angle and move away.
+
+  Output: Robot motion based on external stimuli. 
+*/
+void runAway() {
+  digitalWrite(redLED, 0);
+  digitalWrite(ylwLED, 1);
+  digitalWrite(grnLED, 0);
+
+  if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
+    forward(10);
+    return;
+  }
+
+  if (dist.front != 0 && dist.back != 0 && dist.left == 0 && dist.right == 0) {  //special case for when two wall front and back only
+    goToAngle(90);
+    forward(10);
+    return;
+  }
+
+  if (dist.front != 0 || dist.back != 0 || dist.left != 0 || dist.right != 0) {  //this if statement keeps it still if there is no reading
+    // multiplies direction vector by -1 to ensure it is repelled
+    float x_result = -1.0 * x_vector();
+    float y_result = -1.0 * y_vector();
+
+    float theta = atan2(y_result, x_result) * (180 / PI);
+    if (theta < 0) {
+      theta = 360 + theta;  //this converts the angle back to 0 -> 360
+    }
+    Serial.println(theta);
+
+    float magnitude = sqrt(x_result * x_result + y_result * y_result);
+    if (magnitude < 3.0) {  // threshold
+      return;               // forces too weak, don't move
+    }
+    goToAngle(theta);
+    forward(10);
   }
 }
