@@ -1,11 +1,16 @@
 /************************************
    Unimate-Lab3-M7.ino
-   Andrew Frush, Val Rumzis, 1.16.25
+   Andrew Frush, Val Rumzis, 1.30.25
    ***********************************
    The following program is an implimentation of wall following behavior to avoid and go around obstacles to go to a goal. 
    The primary functions created are:
 
-   followWall();
+   followWall(): Utilizes proportional control and derivative control to follow a wall on the left and right (right is proportional only for easy comparison)
+   followCenter(): Maintained equal distance between two walls flanking the robot to the left and right. Utilizes proportional control only.
+   followCenterLogic(): State machine logic for switching between FollowCenter, FollowWall, and RandomWander
+   goToGoalAvoidance(): Takes robot to relative goal position in the shortest possible distance (line). Deviates from path if obstacle in path.
+
+   Other function were created as helper methods to make more complex behavior like inner and outer wall following.
 
   ************************************/
 //include all necessary libraries
@@ -37,7 +42,7 @@ MultiStepper steppers;                                                 //create 
 #define max_speed 1636       //maximum stepper motor speed
 #define max_accel 10000      //maximum motor acceleration
 
-#define centerDeadband 3
+#define centerDeadband 3  //Tolerance for followCenter, cm distance in both directions from the true center in between two walls.
 
 int pauseTime = 2500;  //time before robot moves
 int stepTime = 500;    //delay time between high and low on step pin
@@ -47,19 +52,13 @@ bool running = true;  // global variable to keep whether the robot should be run
 
 bool lastSeenWall = true;  // global variable for wall follow to track what wall was lost to ensure proper corner following. true = right & false = left
 
-// Variables to keep track of robot position and calculate
+// Variables to keep track of robot global position
 float xc = 0;
 float yc = 0;
 float tc = 0;
 
-int preError; //error info for derivative control
+int preError;  //error info for derivative control on follow wall
 int dE;
-
-int state = 0;  //Main State Controll Variable for the State Machine
-// 0: Random Wander
-// 1: Follow Wall
-// 2: Follow Center
-// 3: ...
 
 // Data to keep the lidar sensor data - taken from example code
 struct sensors {
@@ -85,7 +84,7 @@ void setup() {
 void loop() {
   // Read lidar data from M4
   dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
-  running = RPC.call("isRunning").as<bool>();
+  running = RPC.call("isRunning").as<bool>();  //check if robot should be running
   if (running) {
     digitalWrite(redLED, 0);
     digitalWrite(ylwLED, 1);
@@ -97,7 +96,6 @@ void loop() {
   }
   // followWall();
   // followWallInnerCorner();
-  //delay(50);
   goToGoalAvoidance(72 * 2.54, 0);
   //followCenterLogic();
 }
@@ -158,6 +156,9 @@ void forward(float distance) {
   }
 }
 
+/*
+  Ensures: Turns the robot though a difference in wheel speeds. Direction is left or right turn, Amount is number of steps for outer wheel.
+*/
 void turn(int direction, int amount) {
   digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
@@ -371,7 +372,7 @@ void followWall() {
   if ((dist.left > 0) && (dist.right == 0)) {
     if (dist.left > upperMidBand) {  //for robot too far from wall
       error = dist.left - (upperMidBand + lowerMidBand) / 2;
-      otherSpeed = speed - kp * error + kd * dE; //slowing down wheel proportionally to error and propotional to change in error
+      otherSpeed = speed - kp * error + kd * dE;  //slowing down wheel proportionally to error and propotional to change in error
       if (otherSpeed < 0) {
         otherSpeed = 0;
       }
@@ -392,8 +393,8 @@ void followWall() {
       Serial.println("Right Speed" + String(otherSpeed));
       preError = error;
     }
-  } else if ((dist.right > 0) && (dist.left == 0)) { //follow the right wall
-    if (dist.right > upperMidBand) {  //for robot too far from wall
+  } else if ((dist.right > 0) && (dist.left == 0)) {  //follow the right wall
+    if (dist.right > upperMidBand) {                  //for robot too far from wall
       error = dist.right - (upperMidBand + lowerMidBand) / 2;
       otherSpeed = speed - kp * error;
       if (otherSpeed < 0) {
@@ -685,7 +686,7 @@ void followCenterLogic() {
   Returns: Float representing the force 
 */
 float x_vector() {
-  float kp = 100; //scaler gain
+  float kp = 100;                                                   //scaler gain
   float front_force = (dist.front > 0) ? (1.0 / dist.front) : 0.0;  //stops dividing by 0 which would be an error
   float back_force = (dist.back > 0) ? (1.0 / dist.back) : 0.0;
   return kp * (front_force - back_force);
@@ -695,8 +696,8 @@ float x_vector() {
   Ensures: Returns the Y component of the vector that points twoards the object it sees
 */
 float y_vector() {
-  float kp = 100;//scaler gain
-  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0; //stops dividing by 0 which would be an error
+  float kp = 100;                                                //scaler gain
+  float left_force = (dist.left > 0) ? (1.0 / dist.left) : 0.0;  //stops dividing by 0 which would be an error
   float right_force = (dist.right > 0) ? (1.0 / dist.right) : 0.0;
   return kp * (left_force - right_force);
 }
@@ -743,7 +744,8 @@ void runAway() {
 }
 
 /*
-  Ensures: Takes robot to relative goal position in the shortest possible distance (line). Deviates from path if obstacle in path.
+  Ensures: Takes robot to relative goal position in the shortest possible distance (line). Deviates from path if obstacle in path.A deviation is a scripted event
+           where the robot turns, goes forward, then turns back twoards the goal and tries to advance. This is repeated untill the obstacle is reached.
            The coordinate system of the robot can be visualized below:
 
                 ^ X
@@ -760,32 +762,32 @@ void runAway() {
 void goToGoalAvoidance(float xg, float yg) {
 
   int detectDist = 15;
-  
+
   // Calculate initial angle to goal and turn to face it
-  float theta_initial = atan2(yg - yc, xg - xc) * (180 / PI); //in degrees
+  float theta_initial = atan2(yg - yc, xg - xc) * (180 / PI);  //in degrees
   if (theta_initial < 0) {
     theta_initial = 360 + theta_initial;  // Convert to 0 -> 360
   }
-  
+
   // Turn to face goal initially (goToAngle uses RELATIVE angles)
   float angleToTurn = theta_initial - tc;
   // Normalize to 0-360 range
   while (angleToTurn < 0) angleToTurn += 360;
   while (angleToTurn >= 360) angleToTurn -= 360;
-  
+
   goToAngle(angleToTurn);
   tc = theta_initial;  // Update global orientation
-  
+
   float error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));  // Calculate distance from goal (initial error)
-  
-  while (error > 4) { //four is a static distance that we set as close enough to goal (linear distance of 4cm around goal location)
+
+  while (error > 4) {  //four is a static distance that we set as close enough to goal (linear distance of 4cm around goal location)
     if (!running) {
       continue;
     }
-    
+
     dist = RPC.call("lidarRead").as<sensors>();  // Get sensor data
-    
-    if (dist.front >= detectDist || dist.front == 0) { //move forward if nothing is in front or if 
+
+    if (dist.front >= detectDist || dist.front == 0) {  //move forward if nothing is in front or if
       // Path is clear, move forward one step
       digitalWrite(ltDirPin, LOW);  // Reverse direction
       digitalWrite(rtDirPin, LOW);
@@ -802,32 +804,32 @@ void goToGoalAvoidance(float xg, float yg) {
       xc += ((8.5 * PI) / 800) * cos(tc * (PI / 180));
       yc += ((8.5 * PI) / 800) * sin(tc * (PI / 180));
 
-      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc)); //recalculate error
+      error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));  //recalculate error
 
-    } else if ((dist.front < detectDist) && dist.front != 0) {  
+    } else if ((dist.front < detectDist) && dist.front != 0) {
       // Obstacle detected - avoidance maneuver
-      
+
       Serial.println(tc);
-      
+
       // Turn RIGHT 90 degrees
       goToAngle(270);  // goToAngle will turn 270 which is same as CW 90 (right turn)
-      tc -= 90;  // Turning right decreases angle
+      tc -= 90;        // Turning right decreases angle
       if (tc < 0) {
         tc += 360;  // Keep in 0-360 range
-      }      
+      }
       // Move forward 30 cm (using reverse function since robot drives backwards), hard coded value to move
       reverse(30);
-      
+
       // Update position based on direction we just moved
       xc += 30 * cos(tc * (PI / 180));
       yc += 30 * sin(tc * (PI / 180));
-           
+
       // Calculate new angle to goal from current position
       float theta_to_goal = atan2(yg - yc, xg - xc) * (180 / PI);
       if (theta_to_goal < 0) {
         theta_to_goal = 360 + theta_to_goal;
       }
-      
+
       // Calculate RELATIVE turn needed from current orientation
       float turnAngle = theta_to_goal - tc;
       // Normalize to 0-360 range for goToAngle
@@ -837,11 +839,11 @@ void goToGoalAvoidance(float xg, float yg) {
       // Turn to face goal
       goToAngle(turnAngle);
       tc = theta_to_goal;  // Update global orientation to absolute goal angle
-      
+
       // Recalculate error
       error = sqrt((xg - xc) * (xg - xc) + (yg - yc) * (yg - yc));
     }
   }
-  
+
   Serial.println("Goal reached!");
 }

@@ -36,7 +36,7 @@ struct sensors {
 
 #define tooClose 3
 
-bool running = true; // robot starts by running
+bool running = true;  // robot starts by running
 
 void setup() {
   Serial.begin(115200);
@@ -45,7 +45,6 @@ void setup() {
     blink(ylwLED, 100);
   } else {
     blink(redLED, 100);
-
   }
   RPC.bind("lidarRead", lidarRead);  //Bind the lidarRead method to be callable from M7
   RPC.bind("isRunning", isRunning);  //Bind the isRunning method to be callable from M7
@@ -61,7 +60,7 @@ void loop() {
 
   //Samples the sensors N times and averages their readings
   for (int i = 0; i < numSamples; i++) {
-    tempRightLidar += read_lidar(rightLdr); // !! THESE HAVE BEEN FLIPPED ON PURPOSE SINCE THE ROBOT IS IN REVERSE !!
+    tempRightLidar += read_lidar(rightLdr);  // !! THESE HAVE BEEN FLIPPED ON PURPOSE SINCE THE ROBOT IS IN REVERSE !!
     tempLeftLidar += read_lidar(leftLdr);
     tempFrontLidar += read_lidar(frontLdr);
     tempBackLidar += read_lidar(backLdr);
@@ -72,12 +71,11 @@ void loop() {
   dist.right = tempLeftLidar / numSamples;
   dist.left = tempRightLidar / numSamples;
 
-  // if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)){
-  //   //RPC.call("collide");
-  //   running = false;
-  // } else {
-  //   running = true;
-  // }
+  if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
+    running = false;
+  } else {
+    running = true;
+  }
   delay(10);  // Small delay to prevent overwhelming the sensors
 }
 
@@ -86,7 +84,7 @@ void loop() {
            Useful for troubleshooting purposes.
 */
 void blink(int led, int delaySeconds) {
-  pinMode(led, OUTPUT); //Commented OUT to speed up startup
+  pinMode(led, OUTPUT);  //Commented OUT to speed up startup
   for (int i = 0; i < 10; i++) {
     digitalWrite(led, LOW);
     delay(delaySeconds);
@@ -131,6 +129,6 @@ void init_sensors() {
 /*
   Ensures: This is a getter method for the global running variable
 */
-bool isRunning(){
+bool isRunning() {
   return running;
 }
