@@ -2,7 +2,8 @@
    Unimate-Lab3-M4.ino
    Andrew Frush, Val Rumzis, 
    ***********************************
-   The following program is an implimentation of lidar and sensor reading to be used in conjunction with the corresponding M7 code.
+   The following program is an implimentation of lidar and sensor reading to be used in conjunct
+ion with the corresponding M7 code.
    
    The primary functions created are:
    read_lidar: Given a lidar pin location, returns a distance in cm. 
