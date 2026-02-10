@@ -5,10 +5,10 @@
 
 #define LEDPin 5
 
-const char* ssid = "SpectrumSetup-37";
-const char* password = "zealhotel947";
-// const char* password = "Sc00byD00$4";
-// const char* ssid = "Government Spy"
+// const char* ssid = "SpectrumSetup-37";
+// const char* password = "zealhotel947";
+const char* password = "Sc00byD00$4";
+const char* ssid = "Government Spy";
 
 WiFiServer server(12345);   // TCP port
 WiFiClient client;
