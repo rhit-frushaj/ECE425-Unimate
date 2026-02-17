@@ -72,7 +72,7 @@ def solveMaze(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 
         print(f"Distance: {distance}")
         print(f"Path: {path}")
     
-    facing = 'u'
+    facing = 'd'
     commandVector = [0]*distance
     for i in range(distance):
         if path[i][0] < path[i+1][0]:

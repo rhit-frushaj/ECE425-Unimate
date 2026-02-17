@@ -15,8 +15,8 @@ const char* ssid = "Government Spy";
 WiFiServer server(12345);   // TCP port
 WiFiClient client;
 
-// int forwardConst = 45.5; //Distance of one of the box sides
-int forwardConst = 10;
+int forwardConst = 45.5; //Distance of one of the box sides
+// int forwardConst = 10;
 const char* cmdFinish = "OrderUp";
 
 int stepTime = 500;     //delay time between high and low on step pin
