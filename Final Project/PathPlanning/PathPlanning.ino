@@ -607,23 +607,25 @@ float y_vector() {
   return kp * (left_force - right_force);
 }
 void topologicalFollow(char command[]) {
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     while (true) {
       dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
       if ((dist.right == 0) && (command[i + 1] == 'R')) {  //robot turns after hallway ends
-        reverse(20);
+        reverse(12);
         goToAngle(270);
-        reverse(20);
+        reverse(10);
         Serial.println("Turn Right");
+        followCenterLogic();
         break;
       } else if ((dist.left == 0) && (command[i + 1] == 'L')) {  //robot turns after hallway ends
-        reverse(20);
+        reverse(12);
         goToAngle(90);
-        reverse(20);
+        reverse(10);
         Serial.println("Turn Left");
+        followCenterLogic();
         break;
-      } else if ((dist.front < 6) && (command[i] == 'T') && (dist.front != 0)) {
-          blink(grnLED, 200);
+      } else if ((dist.front < 6) && (command[i + 1] == 'T') && (dist.front != 0)) { //terminating condition
+          blink(grnLED, 500);
           while (true){
             delay(500);
           }
@@ -635,3 +637,4 @@ void topologicalFollow(char command[]) {
     }
   }
 }
+ 
