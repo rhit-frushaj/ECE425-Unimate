@@ -11,22 +11,25 @@ class QNode:
         self.d = d_
         self.parent = parent_  # Track the parent node
 
-def isValid(newpoint, currentpoint, mat, dir):
-    # dir 1 = going North, dir 2 = going East, dir 3 = going South, dir 4 = going West
-    ~((mat[newpoint.x][newpoint.y]>>2 & 1) or (mat[currentpoint.x][currentpoint.y] & 1)) # If North of current point and South of new point are unoccupied
-    ~((mat[newpoint.x][newpoint.y]>>3 & 1) or (mat[currentpoint.x][currentpoint.y]>>1 & 1)) # If East of current point and West of new point are unoccupied
-    ~((mat[newpoint.x][newpoint.y] & 1) or (mat[currentpoint.x][currentpoint.y]>>2 & 1)) # If South of current point and North of new point are unoccupied
-    ~((mat[newpoint.x][newpoint.y]>>1 & 1) or (mat[currentpoint.x][currentpoint.y]>>3 & 1)) # If West of current point and East of new point are unoccupied
-
-    return (0 <= point.x < 4) and (0 <= point.y < 4) and not (mat[point.x][point.y])
+def isValid(newpoint, currentpoint, mat):
+    if newpoint.x < 0 or newpoint.y < 0 or newpoint.x > 3 or newpoint.y > 3:
+        return 0
+    if newpoint.x<currentpoint.x:
+        a = ((mat[newpoint.x][newpoint.y]>>2 & 1) or (mat[currentpoint.x][currentpoint.y] & 1)) ^ 1 # If North of current point and South of new point are unoccupied
+    elif newpoint.y>currentpoint.y:
+        a = ((mat[newpoint.x][newpoint.y]>>3 & 1) or (mat[currentpoint.x][currentpoint.y]>>1 & 1)) ^ 1 # If East of current point and West of new point are unoccupied
+    elif newpoint.x>currentpoint.x:
+        a = ((mat[newpoint.x][newpoint.y] & 1) or (mat[currentpoint.x][currentpoint.y]>>2 & 1)) ^ 1 # If South of current point and North of new point are unoccupied
+    elif newpoint.y<currentpoint.y:
+        a = ((mat[newpoint.x][newpoint.y]>>1 & 1) or (mat[currentpoint.x][currentpoint.y]>>3 & 1)) ^ 1 # If West of current point and East of new point are unoccupied
+    else:
+        a = 0
+        print("Error, direction input unusual")
+    return (0 <= newpoint.x < 4) and (0 <= newpoint.y < 4) and a
 
 def BFS(mat, start, goal):
     r = len(mat)
     c = len(mat[0])
-    
-    # If Source and destination are valid
-    if mat[start.x][start.y] or mat[goal.x][goal.y]: 
-        return -1, []
 
     # Do BFS using Queue and Visited
     visited = [[False] * c for _ in range(r)]
@@ -56,25 +59,32 @@ def BFS(mat, start, goal):
         dy = [0, -1, 1, 0]
         for i in range(4):
             nx, ny = p.x + dx[i], p.y + dy[i]
-            if isValid(Point(nx, ny), mat) and not visited[nx][ny]:
+            if node.parent != None:
+                ox = node.p.x
+                oy = node.p.y
+            else:
+                ox = start.x
+                oy = start.y
+            
+            if isValid(Point(nx, ny), Point(ox, oy), mat) and not visited[nx][ny]:
                 visited[nx][ny] = True
                 q.append(QNode(Point(nx, ny), d + 1, node))  # Pass current node as parent
-                
+                                
     return -1, []
 
-def solveMaze(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 0]], start = Point(0,0), goal = Point(3,2), toggle = 1):
+def solveMaze(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7, 14]], start = Point(0,0), goal = Point(3,3), toggle = 1):
 
-    distance, path = BFS(oGrid, start, goal)
+    distance, path = BFS(grid, start, goal)
 
-    oGrid[start.x][start.y] = 1
-    oGrid[goal.x][goal.y] = 2
+    grid[start.x][start.y] = 'S'
+    grid[goal.x][goal.y] = 'T'
     
     # toggle changes if the print data is printed (ie the map and the solution to the map) 1= on, 0 = off
     if(toggle):
-        print(oGrid[0])
-        print(oGrid[1])
-        print(oGrid[2])
-        print(oGrid[3])
+        print(grid[0])
+        print(grid[1])
+        print(grid[2])
+        print(grid[3])
         print(f"Distance: {distance}")
         print(f"Path: {path}")
     
