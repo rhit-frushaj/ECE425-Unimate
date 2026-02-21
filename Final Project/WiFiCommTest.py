@@ -44,11 +44,11 @@ class QNode:
         self.d = d_
         self.parent = parent_
 
-def isValid(point, mat):
+def isValidOccupancy(point, mat):
     """Returns True if the point is inside the grid and not a wall."""
     return (0 <= point.x < len(mat)) and (0 <= point.y < len(mat[0])) and not mat[point.x][point.y]
 
-def BFS(mat, start, goal):
+def BFSOccupancy(mat, start, goal):
     """
     Breadth-first search from start to goal on mat.
     Walls are any truthy cell value (e.g. 99 or True).
@@ -83,10 +83,71 @@ def BFS(mat, start, goal):
         dy = [0, -1, 1, 0]
         for i in range(4):
             nx, ny = p.x + dx[i], p.y + dy[i]
-            if isValid(Point(nx, ny), mat) and not visited[nx][ny]:
+            if isValidOccupancy(Point(nx, ny), mat) and not visited[nx][ny]:
                 visited[nx][ny] = True
                 q.append(QNode(Point(nx, ny), node.d + 1, node))
 
+    return -1, []
+
+def isValidTop(newpoint, currentpoint, mat):
+    if newpoint.x < 0 or newpoint.y < 0 or newpoint.x > 3 or newpoint.y > 3:
+        return 0
+    if newpoint.x<currentpoint.x:
+        a = ((mat[newpoint.x][newpoint.y]>>2 & 1) or (mat[currentpoint.x][currentpoint.y] & 1)) ^ 1 # If North of current point and South of new point are unoccupied
+    elif newpoint.y>currentpoint.y:
+        a = ((mat[newpoint.x][newpoint.y]>>3 & 1) or (mat[currentpoint.x][currentpoint.y]>>1 & 1)) ^ 1 # If East of current point and West of new point are unoccupied
+    elif newpoint.x>currentpoint.x:
+        a = ((mat[newpoint.x][newpoint.y] & 1) or (mat[currentpoint.x][currentpoint.y]>>2 & 1)) ^ 1 # If South of current point and North of new point are unoccupied
+    elif newpoint.y<currentpoint.y:
+        a = ((mat[newpoint.x][newpoint.y]>>1 & 1) or (mat[currentpoint.x][currentpoint.y]>>3 & 1)) ^ 1 # If West of current point and East of new point are unoccupied
+    else:
+        a = 0
+        print("Error, direction input unusual")
+    return (0 <= newpoint.x < 4) and (0 <= newpoint.y < 4) and a
+
+def BFSTop(mat, start, goal):
+    r = len(mat)
+    c = len(mat[0])
+
+    # Do BFS using Queue and Visited
+    visited = [[False] * c for _ in range(r)]
+    from collections import deque
+    q = deque([QNode(start, 0, None)])
+    visited[start.x][start.y] = True
+    
+    while q:
+        # Pop an item from queue
+        node = q.popleft()
+        p = node.p
+        d = node.d
+
+        # If we reached the destination
+        if p.x == goal.x and p.y == goal.y:
+            # Reconstruct path
+            path = []
+            current = node
+            while current is not None:
+                path.append((current.p.x, current.p.y))
+                current = current.parent
+            path.reverse()  # Reverse to get start -> goal
+            return d, path
+        
+        # Try all four adjacent
+        dx = [-1, 0, 0, 1]
+        dy = [0, -1, 1, 0]
+        for i in range(4):
+            nx, ny = p.x + dx[i], p.y + dy[i]
+            if node.parent != None:
+                ox = node.p.x
+                oy = node.p.y
+            else:
+                ox = start.x
+                oy = start.y
+            
+            if isValidTop(Point(nx, ny), Point(ox, oy), mat) and not visited[nx][ny]:
+                visited[nx][ny] = True
+                q.append(QNode(Point(nx, ny), d + 1, node))  # Pass current node as parent
+                                
     return -1, []
 
 def pathToCommands(path):
@@ -120,9 +181,9 @@ def pathToCommands(path):
             print(f"[WARN] Unexpected step delta {delta} at path index {i}")
     return commands
 
-def solveMaze(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 0]], start = Point(0,0), goal = Point(3,2), toggle = 1):
+def solveMazeOccupancy(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 0]], start = Point(0,0), goal = Point(3,2), toggle = 1):
     global commandQueue, dispatching
-    distance, path = BFS(oGrid, start, goal)
+    distance, path = BFSOccupancy(oGrid, start, goal)
 
     oGrid[start.x][start.y] = 1
     oGrid[goal.x][goal.y] = 2
@@ -200,6 +261,84 @@ def solveMaze(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 
     threading.Thread(target=dispatch_loop, daemon=True).start()
     return True
 
+def solveMazeTop(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7, 14]], start = Point(0,0), goal = Point(3,3), toggle = 1):
+    global commandQueue, dispatching
+    distance, path = BFSTop(grid, start, goal)
+
+    grid[start.x][start.y] = 'S'
+    grid[goal.x][goal.y] = 'T'
+    
+    # toggle changes if the print data is printed (ie the map and the solution to the map) 1= on, 0 = off
+    if(toggle):
+        print(grid[0])
+        print(grid[1])
+        print(grid[2])
+        print(grid[3])
+        print(f"Distance: {distance}")
+        print(f"Path: {path}")
+    
+    facing = 'd'
+    commandVector = [0]*distance
+    for i in range(distance):
+        if path[i][0] < path[i+1][0]:
+            if facing == 'u':
+                facing = 'd'
+                commandVector[i] = 'b'
+            elif facing == 'd':
+                commandVector[i] = 'f'
+            elif facing == 'r':
+                facing = 'd'
+                commandVector[i] = 'r'
+            elif facing == 'l':
+                facing = 'd'
+                commandVector[i] = 'l'
+        if path[i][1] < path[i+1][1]:
+            if facing == 'u':
+                facing = 'r'
+                commandVector[i] = 'r'
+            elif facing == 'd':
+                facing = 'r'
+                commandVector[i] = 'l'
+            elif facing == 'r':
+                commandVector[i] = 'f'
+            elif facing == 'l':
+                facing = 'r'
+                commandVector[i] = 'b'
+        if path[i][0] > path[i+1][0]:
+            if facing == 'u':
+                commandVector[i] = 'f'
+            elif facing == 'd':
+                facing = 'u'
+                commandVector[i] = 'b'
+            elif facing == 'r':
+                facing = 'u'
+                commandVector[i] = 'l'
+            elif facing == 'l':
+                facing = 'u'
+                commandVector[i] = 'r'
+        if path[i][1] > path[i+1][1]:
+            if facing == 'u':
+                facing = 'l'
+                commandVector[i] = 'l'
+            elif facing == 'd':
+                facing = 'l'
+                commandVector[i] = 'r'
+            elif facing == 'r':
+                facing = 'l'
+                commandVector[i] = 'b'
+            elif facing == 'l':
+                commandVector[i] = 'f'
+    commandQueue = deque(commandVector)
+
+    status_msg = f"Path found ({distance} steps). Starting dispatch…"
+    output.set(status_msg)
+    print(f"[INFO] {status_msg}")
+    print(f"[INFO] Commands: {list(commandQueue)}")
+    
+    # Kick off the dispatch loop in a background thread so the GUI stays responsive
+    dispatching = True
+    threading.Thread(target=dispatch_loop, daemon=True).start()
+    return True
 # -------------------------
 # COMMAND DISPATCH LOOP
 # -------------------------
@@ -304,12 +443,18 @@ for j in range(num_cols):
 label = tk.Label(root, textvariable=output, font=("Arial", 24))
 label.grid(row=0, column=0, columnspan=2, pady=10)
 
-# ── Solve Maze button (replaces the old Ping button) ──────────────────────────
+# ── Solve Maze buttons (replaces the old Ping button) ──────────────────────────
 tk.Button(
     root,
-    text="Solve Maze",
-    command=lambda: threading.Thread(target=solveMaze, daemon=True).start()
+    text="Solve Occupancy Maze",
+    command=lambda: threading.Thread(target=solveMazeOccupancy, daemon=True).start()
 ).grid(row=1, column=0, padx=10, pady=10)
+
+tk.Button(
+    root,
+    text="Solve Topological Maze",
+    command=lambda: threading.Thread(target=solveMazeTop, daemon=True).start()
+).grid(row=2, column=0, padx=10, pady=10)
 
 # ── Directional triad ─────────────────────────────────────────────────────────
 triad_center = (2, 7)

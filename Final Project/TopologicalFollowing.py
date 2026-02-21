@@ -11,7 +11,7 @@ class QNode:
         self.d = d_
         self.parent = parent_  # Track the parent node
 
-def isValid(newpoint, currentpoint, mat):
+def isValidTop(newpoint, currentpoint, mat):
     if newpoint.x < 0 or newpoint.y < 0 or newpoint.x > 3 or newpoint.y > 3:
         return 0
     if newpoint.x<currentpoint.x:
@@ -27,7 +27,7 @@ def isValid(newpoint, currentpoint, mat):
         print("Error, direction input unusual")
     return (0 <= newpoint.x < 4) and (0 <= newpoint.y < 4) and a
 
-def BFS(mat, start, goal):
+def BFSTop(mat, start, goal):
     r = len(mat)
     c = len(mat[0])
 
@@ -66,15 +66,15 @@ def BFS(mat, start, goal):
                 ox = start.x
                 oy = start.y
             
-            if isValid(Point(nx, ny), Point(ox, oy), mat) and not visited[nx][ny]:
+            if isValidTop(Point(nx, ny), Point(ox, oy), mat) and not visited[nx][ny]:
                 visited[nx][ny] = True
                 q.append(QNode(Point(nx, ny), d + 1, node))  # Pass current node as parent
                                 
     return -1, []
 
-def solveMaze(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7, 14]], start = Point(0,0), goal = Point(3,3), toggle = 1):
+def solveMazeTop(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7, 14]], start = Point(0,0), goal = Point(3,3), toggle = 1):
 
-    distance, path = BFS(grid, start, goal)
+    distance, path = BFSTop(grid, start, goal)
 
     grid[start.x][start.y] = 'S'
     grid[goal.x][goal.y] = 'T'
@@ -142,4 +142,4 @@ def solveMaze(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7,
     return commandVector
 
 
-print(f"CommandPath: {solveMaze()}")
+print(f"CommandPath: {solveMazeTop()}")
