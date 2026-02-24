@@ -70,8 +70,20 @@ void loop() {
   //Update the sensor Readings (Lidar and Light)
   checkLightReadings(true);                    //true Print Results, false no print
   dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
+  float x_result = -1.0 * x_vector();
+  float y_result = -1.0 * y_vector();
+  float magnitude = sqrt(x_result * x_result + y_result * y_result);
+  
   moveToLight();
 
+  // if(magnitude >= 3.0){
+  //   runAway();
+  // }
+  if(lightLeftVolt > 0.15 || lightRightVolt > 0.15){
+    moveToLight();
+  } else{
+    randomWander();
+  }
   // delay(500);
 }
 
