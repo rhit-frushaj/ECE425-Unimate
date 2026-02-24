@@ -1,9 +1,8 @@
 /************************************
-   Unimate-Lab3-M4.ino
-   Andrew Frush, Val Rumzis, 
+   LightFollowing_M4.ino
+   Andrew Frush, Val Rumzis, 2/24/26
    ***********************************
-   The following program is an implimentation of lidar and sensor reading to be used in conjunct
-ion with the corresponding M7 code.
+   The following program is an implimentation of lidar and sensor reading to be used in conjunction with the corresponding M7 code.
    
    The primary functions created are:
    read_lidar: Given a lidar pin location, returns a distance in cm. 
@@ -67,10 +66,10 @@ void loop() {
     tempBackLidar += read_lidar(backLdr);
   }
 
-  dist.back = tempFrontLidar / numSamples;
-  dist.front = tempBackLidar / numSamples;
-  dist.right = tempLeftLidar / numSamples;
-  dist.left = tempRightLidar / numSamples;
+  dist.back = tempBackLidar / numSamples;
+  dist.front = tempFrontLidar / numSamples;
+  dist.right = tempRightLidar / numSamples;
+  dist.left = tempLeftLidar / numSamples;
 
   if ((dist.front <= tooClose && dist.front != 0) || (dist.back <= tooClose && dist.back != 0) || (dist.left <= tooClose && dist.left != 0) || (dist.right <= tooClose && dist.right != 0)) {
     running = false;

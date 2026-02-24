@@ -1,5 +1,19 @@
+/************************************
+   WiFi_MapSolving.ino
+   Andrew Frush, Val Rumzis, 2/24/26
+   ***********************************
+   The following program is an implimentation of server client communication with the intent on recieving cardinal direction instructions to solve a grid structured maze. 
+   The primary functions created are:
 
-// Testing File for recieving and sending Serial Communication from the Arduino to Computer over WiFi 
+   connectToWifi(): Connects arduino to WiFi. Prints the ip address of the Arduino Giga to the terminal so it can be used to connect to from client. 
+   requestOrders(): Ending command to send back to cliend to signal command has been processed.
+   **processCommand: This method interperets the incoming commands and moved the robot accordingly.
+ 
+   Other function were created as helper methods to make more complex behavior like inner and outer wall following.
+
+   ** No an actual seperate method all of this is a part of the loop method
+
+  ************************************/
 
 #include <WiFi.h>
 #include <AccelStepper.h>//include the stepper motor library
@@ -7,17 +21,15 @@
 
 #define LEDPin 5
 
-// const char* ssid = "SpectrumSetup-37";
-// const char* password = "zealhotel947";
-const char* password = "Sc00byD00$4";
+const char* password = "**REDACTED**";
 const char* ssid = "Government Spy";
 
 WiFiServer server(12345);   // TCP port
 WiFiClient client;
 
 int forwardConst = 45.5; //Distance of one of the box sides
-// int forwardConst = 10;
-const char* cmdFinish = "OrderUp";
+
+const char* cmdFinish = "OrderUp"; //Key word that is sent to the client to signal order completion
 
 int stepTime = 500;     //delay time between high and low on step pin
 
@@ -59,11 +71,11 @@ void init_stepper(){
 void setup() {
   Serial.begin(115200);
   pinMode(LEDPin, OUTPUT);
+  
   connectToWiFi();
-
   init_stepper();
 
-
+  //Connect to Computer and signal hook up
   server.begin();
   Serial.println("TCP server started");
   Serial.print("Arduino IP: ");
@@ -81,11 +93,11 @@ void loop() {
   }
 
 
-  //Read Lidar Example
+  //Read Lidar
   client.println(read_lidar(10));
 
 
-  // If client sent data
+  // Catch and interpret data sent from client (computer)
   if (client && client.connected() && client.available()) {
     String cmd = client.readStringUntil('\n');
     cmd.trim();
@@ -101,42 +113,46 @@ void loop() {
       client.println("Arduino is alive");
       blink(5);
       requestOrders();
-    }
-    else if(cmd == "f" || cmd == "FORWARD"){
+    } //Driving Commands for maze movement
+    else if(cmd == "f" || cmd == "FORWARD"){ //forward command
       forward(forwardConst);
-      requestOrders();
+      requestOrders(); //signal completion after each movement back to client
     }
-    else if( cmd == "r"){
+    else if( cmd == "r"){ //right turn and move command
       goToAngle(270);
       forward(forwardConst);
       requestOrders();
     }
-    else if(cmd == "l"){
+    else if(cmd == "l"){ //left turn and drive command
       goToAngle(90);
       forward(forwardConst);
       requestOrders();
     }
-    else if(cmd == "b"){
+    else if(cmd == "b"){ //rever/backwards turn and move command
       goToAngle(180);
       forward(forwardConst);
       requestOrders();
     }
-    else if (cmd == "Stop"){
+    else if (cmd == "Stop"){ //stop command
       Serial.print("No More Orders");
     }
-    else {
+    else { //catch all
       client.println("Unknown command");
     }
   }
   delay(100);
 }
 
-
+/*
+  Ensures: Sends message back to client that the last order has been completed. Seperate method in case wnat to add other indicators or actions upon completing order.
+*/
 void requestOrders(){
   client.println(cmdFinish);
 }
 
-
+/*
+  Ensures: Simple connect to WiFi command, taken from prior project, standard method.
+*/
 void connectToWiFi() {
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -146,6 +162,10 @@ void connectToWiFi() {
   Serial.println("Connected to WiFi");
 }
 
+/*
+  Ensures: Blinks LED for debugging and status purposes.
+  int Count: number of times to blink LED
+*/
 void blink(int count){
   for(int i = 0; i <count; i++){
   digitalWrite(LEDPin, 0);

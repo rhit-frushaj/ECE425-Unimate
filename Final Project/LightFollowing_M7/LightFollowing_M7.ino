@@ -1,3 +1,17 @@
+/************************************
+   LightFollowing_M7.ino
+   Andrew Frush, Val Rumzis, 2/24/26
+   ***********************************
+   The following program is an implementation of a light following state machine with runaway/obstacle avoidance behavior. 
+   The primary functions created are:
+
+   checkLightReadings(Bool: print): This method reads the photoresistor voltages. Serial printing is togelable through printing
+   moveToLight(): Based on the current light readings, moved the robot motors at a proportional speed, or no movement at all
+
+   Other function were created as helper methods to make more complex behavior like inner and outer wall following.
+
+  ************************************/
+
 //include all necessary libraries
 #include <Arduino.h>
 #include <RPC.h>
@@ -27,18 +41,11 @@ MultiStepper steppers;                                                 //create 
 #define max_speed 1636       //maximum stepper motor speed
 #define max_accel 10000      //maximum motor acceleration
 
-#define frontLdr 10
-#define backLdr 11
-#define leftLdr 12
-#define rightLdr 13
-#define numSamples 3
-#define tooClose 3
-
 int pauseTime = 2500;  //time before robot moves
 int stepTime = 500;    //delay time between high and low on step pin
 int wait_time = 1000;  //delay for printing data
 
-float lightLeftVolt = 0;
+float lightLeftVolt = 0; //Light voltages, updated periodically
 float lightRightVolt = 0;
 
 // Data structure for sensor readings
@@ -70,23 +77,35 @@ void loop() {
   //Update the sensor Readings (Lidar and Light)
   checkLightReadings(true);                    //true Print Results, false no print
   dist = RPC.call("lidarRead").as<sensors>();  //get sensor data
+  stateMachine(); //Main Logic
+  
+}
+
+/*
+  Ensures: Controls the state of the robot. Transitioning between randomWander, RunAway, and followLight.
+*/
+void stateMachine(){
+  //Checking for objects nearby 
   float x_result = -1.0 * x_vector();
   float y_result = -1.0 * y_vector();
   float magnitude = sqrt(x_result * x_result + y_result * y_result);
-  
-  moveToLight();
 
-  // if(magnitude >= 3.0){
-  //   runAway();
-  // }
-  if(lightLeftVolt > 0.15 || lightRightVolt > 0.15){
+
+  //All State Logic based on stimuli
+  if(magnitude >= 3.0){ //if object to close it runs away in opposite direction proporional to the object closeness
+    runAway();
+  }
+  if(lightLeftVolt > 0.15 || lightRightVolt > 0.15){ //checks for light, if light it breaks into following
     moveToLight();
-  } else{
+  } else{ //if object not too close and no light then random wanders
     randomWander();
   }
-  // delay(500);
 }
 
+/*
+  Ensures: Reads light readings from two photoresistors. Output is voltages. Saved to global variables
+  Input Bool: True if want light voltages printed to terminal, False no printing
+*/
 void checkLightReadings(bool print) {
   lightLeftVolt = analogRead(A0) * (5.0 / 1023.0);
   lightRightVolt = analogRead(A1) * (5.0 / 1023.0);
@@ -99,29 +118,6 @@ void checkLightReadings(bool print) {
   }
 }
 
-/*
-  Ensures: Given lidar method.
-  Return: Int distance from lidar sensor in [cm]
-*/
-int read_lidar(int pin) {
-  int d;
-  int16_t t = pulseIn(pin, HIGH);
-  d = (t - 1000) * 3 / 40;
-  if (t == 0 || t > 1850 || d < 0) {
-    d = 0;
-  }
-  return d;
-}
-
-/*
-  Ensures: Initializes all the pins for the sensors (lidar and sonar).
-*/
-void init_sensors() {
-  pinMode(frontLdr, INPUT);
-  pinMode(backLdr, INPUT);
-  pinMode(leftLdr, INPUT);
-  pinMode(rightLdr, INPUT);
-}
 
 //function to set all stepper motor variables, outputs and LEDs
 void init_stepper() {
@@ -154,8 +150,13 @@ void init_stepper() {
   digitalWrite(enableLED, HIGH);               //turn on enable LED
 }
 
-
+/*
+  Ensures: Checks light readings and then sets the proportional speed on the corresponding motor. Moved robot by 10 steps before recalculating. 
+*/
 void moveToLight() {
+  digitalWrite(grnLED, LOW);
+  digitalWrite(redLED, LOW);
+  digitalWrite(ylwLED, HIGH);
 
   stepperLeft.setSpeed(0);
   stepperRight.setSpeed(0);
@@ -165,7 +166,6 @@ void moveToLight() {
   int kp = 250;
 
   if (lightLeftVolt > 0.15) {
-    Serial.println("HERE");
     stepperLeft.setSpeed(lightLeftVolt * kp);
   }
   if (lightRightVolt > 0.15) {
@@ -200,8 +200,8 @@ void blink(int led, int delaySeconds) {
   Output: Robot motion based on external stimuli. 
 */
 void runAway() {
-  digitalWrite(redLED, 0);
-  digitalWrite(ylwLED, 1);
+  digitalWrite(redLED, 1);
+  digitalWrite(ylwLED, 0);
   digitalWrite(grnLED, 0);
 
   if (dist.front == 0 && dist.back == 0 && dist.left != 0 && dist.right != 0) {  //special hard coded case for when there are two walls on the left and right of robot only
@@ -224,12 +224,7 @@ void runAway() {
     if (theta < 0) {
       theta = 360 + theta;  //this converts the angle back to 0 -> 360
     }
-    Serial.println(theta);
 
-    float magnitude = sqrt(x_result * x_result + y_result * y_result);
-    if (magnitude < 3.0) {  // threshold
-      return;               // forces too weak, don't move
-    }
     goToAngle(theta);
     forward(10);
   }
@@ -240,10 +235,6 @@ void runAway() {
   float distance: Distance to move forwards in cm.
 */
 void forward(float distance) {
-  // Serial.println("forward function");
-  // digitalWrite(redLED, HIGH);//turn on red LED
-  // digitalWrite(grnLED, LOW);//turn off green LED
-  // digitalWrite(ylwLED, LOW);//turn off yellow LED
   digitalWrite(ltDirPin, HIGH);  // Enables the motor to move in a particular direction
   digitalWrite(rtDirPin, HIGH);  // Enables the motor to move in a particular direction
 

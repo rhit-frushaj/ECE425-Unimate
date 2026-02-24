@@ -1,4 +1,24 @@
   
+# /************************************
+#    WiFi_MapSolving_ClientScript.py
+#    Andrew Frush, Val Rumzis, 2/24/26
+#    ***********************************
+#    The following program is an implimentation of server client communication with the intent on solving, interpresting, and sending cardinal direction instructions to solve a grid structured maze. This also includes the GUI for robot movement, status updates, and buttons to trigger the maze solving. 
+#    The primary functions created are:
+#
+#    - BFSOccupancy: Solves a maze represented as an occupancy grid using breadth-first search. Returns the distance and path from start to goal.
+#    - BFSTop: Solves a maze represented as a topological grid using breadth-first search. Returns the distance and path from start to goal.
+#    - pathToCommands: Converts a list of (x, y) coordinates into a list of movement commands (e.g. "FORWARD", "l", "r", "b") based on the assumed orientation of the robot and the direction of movement between consecutive points in the path.
+#    - solveMazeOccupancy: High-level function that takes an occupancy grid, start and goal points, and a toggle for printing debug info. It solves the maze using BFSOccupancy, converts the resulting path to commands, and prepares the command queue for dispatching.
+#    - solveMazeTop: High-level function that takes a topological grid, start and goal points, and a toggle for printing debug info. It solves the maze using BFSTop, converts the resulting path to commands, and prepares the command queue for dispatching.
+#    - dispatch_loop: Continuously sends commands from the command queue to the Arduino, waiting for an "OrderUp" response before sending the next command. Stops after sending "Stop".
+#    - receive_data: Continuously reads from the socket. When "OrderUp" is detected, signals the dispatch loop to proceed to the next command. All other lines are shown in the GUI label.
+#    - send: Helper function to send a command to the Arduino, appending a newline
+#    
+#     Other function were created as helper methods to make more complex behavior like inner and outer wall following.
+# ************************************/
+  
+
 import socket
 import tkinter as tk
 import threading
@@ -29,7 +49,7 @@ dispatching = False
 # -------------------------
 
 class Point:
-    """A point in a Maze (needed for QNode)."""
+    """A point in a Maze (needed for QNode).""" # <---- these are the comments here for each class and function 
     def __init__(self, x_, y_):
         self.x = x_
         self.y = y_
@@ -90,6 +110,7 @@ def BFSOccupancy(mat, start, goal):
     return -1, []
 
 def isValidTop(newpoint, currentpoint, mat):
+    """Returns True if the newpoint is inside the grid and the path from currentpoint to newpoint is not blocked by a wall according to mat's bitwise encoding."""
     if newpoint.x < 0 or newpoint.y < 0 or newpoint.x > 3 or newpoint.y > 3:
         return 0
     if newpoint.x<currentpoint.x:
@@ -106,6 +127,8 @@ def isValidTop(newpoint, currentpoint, mat):
     return (0 <= newpoint.x < 4) and (0 <= newpoint.y < 4) and a
 
 def BFSTop(mat, start, goal):
+    """Breadth-first search from start to goal on mat.
+    Walls are determined by the bitwise encoding of each cell:"""
     r = len(mat)
     c = len(mat[0])
 
@@ -182,8 +205,9 @@ def pathToCommands(path):
     return commands
 
 def solveMazeOccupancy(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0, 99, 0, 0]], start = Point(0,0), goal = Point(3,2), toggle = 1):
+    """Solves the maze using BFS and prepares the command queue for dispatching. Function takes in the occupancy grid, start and goal points, and a toggle for printing debug inf0. However, the default values are set to the example maze provided in the project description."""
     global commandQueue, dispatching
-    distance, path = BFSOccupancy(oGrid, start, goal)
+    distance, path = BFSOccupancy(oGrid, start, goal) # calls and solve the maze using the BFS function for occupancy grid
 
     oGrid[start.x][start.y] = 1
     oGrid[goal.x][goal.y] = 2
@@ -197,7 +221,9 @@ def solveMazeOccupancy(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0
         print(f"Distance: {distance}")
         print(f"Path: {path}")
     
-    facing = 'd'
+    
+    # Convert path to commands.  This assumes the robot starts facing down/south.  Adjust if your robot's orientation differs.
+    facing = 'd' # intial robot orientation
     commandVector = [0]*distance
     for i in range(distance):
         if path[i][0] < path[i+1][0]:
@@ -262,6 +288,7 @@ def solveMazeOccupancy(oGrid = [[0, 99, 99, 0], [0, 0, 0, 0], [0, 99, 99, 0], [0
     return True
 
 def solveMazeTop(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12, 7, 14]], start = Point(0,0), goal = Point(3,3), toggle = 1):
+    """Solves the maze using BFS and prepares the command queue for dispatching. Function takes in the topological grid, start and goal points, and a toggle for printing debug info. However, the default values are set to the example maze provided in the project description."""
     global commandQueue, dispatching
     distance, path = BFSTop(grid, start, goal)
 
@@ -277,7 +304,8 @@ def solveMazeTop(grid = [[9, 7, 11, 15], [12, 1, 6, 11], [13, 0, 5, 2], [15, 12,
         print(f"Distance: {distance}")
         print(f"Path: {path}")
     
-    facing = 'd'
+    # Convert path to commands.  This assumes the robot starts facing down/south.  Adjust if your robot's orientation differs.
+    facing = 'd' # intial robot orientation
     commandVector = [0]*distance
     for i in range(distance):
         if path[i][0] < path[i+1][0]:
@@ -414,6 +442,7 @@ threading.Thread(target=receive_data, daemon=True).start()
 # -------------------------
 
 def send(cmd):
+    """Sends a command to the Arduino, appending a newline.  Catches and logs any exceptions."""
     try:
         sock.sendall((cmd + "\n").encode())
     except Exception as e:
@@ -443,7 +472,7 @@ for j in range(num_cols):
 label = tk.Label(root, textvariable=output, font=("Arial", 24))
 label.grid(row=0, column=0, columnspan=2, pady=10)
 
-# ── Solve Maze buttons (replaces the old Ping button) ──────────────────────────
+# Solve Maze buttons (replaces the old Ping button)
 tk.Button(
     root,
     text="Solve Occupancy Maze",
@@ -456,7 +485,7 @@ tk.Button(
     command=lambda: threading.Thread(target=solveMazeTop, daemon=True).start()
 ).grid(row=2, column=0, padx=10, pady=10)
 
-# ── Directional triad ─────────────────────────────────────────────────────────
+# Directional triad
 triad_center = (2, 7)
 tk.Button(root, text="↑", command=lambda: send("FORWARD")).grid(row=triad_center[0]-1, column=triad_center[1])
 tk.Button(root, text="←", command=lambda: send("l")).grid(row=triad_center[0],   column=triad_center[1]-1)
